@@ -1,0 +1,8 @@
+<svg width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="220" rx="52" fill="#fff7ed"/>
+  <circle cx="110" cy="102" r="70" fill="#f97316"/>
+  <path d="M70 135c11 24 69 24 80 0l-8 40H78l-8-40Z" fill="#7c2d12"/>
+  <path d="M77 88c22-36 47-36 66 0 13 25-1 58-33 58S64 113 77 88Z" fill="#fde68a"/>
+  <path d="M89 84c8-13 25-14 35 0" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/>
+  <text x="110" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="18" fill="#7c2d12">DM Kulfi</text>
+</svg>
