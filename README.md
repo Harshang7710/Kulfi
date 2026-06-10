@@ -48,6 +48,16 @@ A responsive MongoDB-backed full-stack web application for billing, POS, two-fri
 
 6. Open <http://localhost:3000>.
 
+## Conflict-resolution validation
+
+This branch includes a small conflict-marker check for the files that commonly conflict during the MongoDB/logo migration. Run it before pushing or opening a PR:
+
+```bash
+npm run check:conflicts
+```
+
+The check scans `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js` for unresolved merge markers.
+
 ## Seed logins
 
 - Owner: `owner@desimastaani.test` / `password123`

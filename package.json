@@ -7,7 +7,8 @@
     "dev": "node src/server.js",
     "start": "NODE_ENV=production node src/server.js",
     "db:seed": "node src/db.js --seed",
-    "check": "node --check src/server.js && node --check src/db.js && node --check src/auth.js"
+    "check": "node --check src/server.js && node --check src/db.js && node --check src/auth.js",
+    "check:conflicts": "node -e \"const fs=require('fs');const files=['.env.example','README.md','package.json','public/logo.svg','public/styles.css','src/auth.js','src/db.js','src/server.js'];const marker=/^(<{7}|={7}|>{7})/m;const bad=files.filter(f=>marker.test(fs.readFileSync(f,'utf8')));if(bad.length){console.error('Conflict markers found in '+bad.join(', '));process.exit(1)}console.log('No conflict markers found in tracked conflict-prone files.');\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -18,8 +19,8 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.12.0",
     "morgan": "^1.10.0",
-    "zod": "^3.24.1",
-    "mongodb": "^6.12.0"
+    "zod": "^3.24.1"
   }
 }
