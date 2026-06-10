@@ -16,6 +16,7 @@ A responsive MongoDB-backed full-stack web application for billing, POS, two-fri
 - Owner user management for manager and owner accounts.
 - MongoDB-backed `/health` endpoint.
 - Kulfi-themed responsive UI with reusable card, table, badge, notice, shell, sidebar, and form patterns.
+- Provided Desi Mastaani logo integrated into the login page and authenticated sidebar/header brand surfaces via `public/logo.svg`.
 
 ## Setup
 
@@ -54,6 +55,6 @@ A responsive MongoDB-backed full-stack web application for billing, POS, two-fri
 
 ## Production notes
 
-- Replace `public/logo.svg` with the provided final brand logo if needed; the app already references it on login, the authenticated shell, and brand surfaces.
+- The provided Desi Mastaani Matka Kulfi logo is stored at `public/logo.svg` and is used on login plus authenticated brand surfaces. For future brand changes, replace that single asset and keep the same path.
 - Use HTTPS in production so secure cookies are enabled with `NODE_ENV=production`.
 - Use MongoDB Atlas backups or your MongoDB provider backup tooling for production data protection.
