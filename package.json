@@ -8,7 +8,8 @@
     "start": "NODE_ENV=production node src/server.js",
     "db:seed": "node src/db.js --seed",
     "check": "node --check src/server.js && node --check src/db.js && node --check src/auth.js && node --check api/index.js && node --check scripts/check-conflicts.js",
-    "check:conflicts": "node scripts/check-conflicts.js"
+    "check:conflicts": "node scripts/check-conflicts.js",
+    "check:reported-conflicts": "node scripts/check-conflicts.js README.md src/db.js src/server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

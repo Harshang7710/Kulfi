@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const bcrypt = require('bcryptjs');
 const { stringify } = require('csv-stringify/sync');
 const { z } = require('zod');
-const { connect, collections, seedIfEmpty, todayBounds, money, makeBillNumber, objectId, withTransaction } = require('./db');
+const { connect, collections, seedIfEmpty, todayBounds, money, makeBillNumber, objectId, withTransaction, databaseConfigSummary } = require('./db');
 const { attachUser, requireRole, login, setSessionCookie, clearSessionCookie } = require('./auth');
 
 const app = express();
@@ -451,9 +451,15 @@ app.post('/manager/returns', requireRole('manager'), aw(async (req, res) => {
 }));
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  const config = databaseConfigSummary();
+  console.error('Application startup/request error', {
+    message: err.message,
+    name: err.name,
+    mongo: config
+  });
+  const reason = config.hasUri ? err.message : 'MONGODB_URI is missing in this deployment environment';
   const message = process.env.NODE_ENV === 'production'
-    ? 'Database connection failed or the application could not finish startup. Please verify MongoDB Atlas environment variables and network access.'
+    ? `Database connection failed or the application could not finish startup. ${reason}. Check Vercel Project Settings > Environment Variables and MongoDB Atlas Network Access, then redeploy.`
     : `Database error or unexpected application error: ${err.message}`;
   res.status(503).send(message);
 });

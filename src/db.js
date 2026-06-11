@@ -3,11 +3,44 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const DEFAULT_DB_NAME = 'kulfi_franchise';
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB || DEFAULT_DB_NAME;
 
-if (!uri && require.main !== module) {
-  console.warn('MONGODB_URI is not set. Add it to .env before starting the app.');
+function cleanEnv(value) {
+  const trimmed = String(value || '').trim();
+  return trimmed.replace(/^['\"]|['\"]$/g, '');
+}
+
+function mongoUri() {
+  return cleanEnv(process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL);
+}
+
+function mongoDbName() {
+  return cleanEnv(process.env.MONGODB_DB) || DEFAULT_DB_NAME;
+}
+
+function redactMongoUri(value = mongoUri()) {
+  if (!value) return '(not set)';
+  try {
+    const parsed = new URL(value);
+    if (parsed.password) parsed.password = '***';
+    if (parsed.username) parsed.username = `${parsed.username.slice(0, 3)}***`;
+    return parsed.toString();
+  } catch {
+    return '(invalid MongoDB URI format)';
+  }
+}
+
+function databaseConfigSummary() {
+  return {
+    hasUri: Boolean(mongoUri()),
+    uri: redactMongoUri(),
+    database: mongoDbName(),
+    serverSelectionTimeoutMS: Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || 5000),
+    connectTimeoutMS: Number(process.env.MONGODB_CONNECT_TIMEOUT_MS || 5000)
+  };
+}
+
+if (!mongoUri() && require.main !== module) {
+  console.warn('MONGODB_URI is not set. Add it to .env locally or to Vercel Environment Variables before starting the app.');
 }
 
 let client;
@@ -21,7 +54,9 @@ function objectId(id) {
 
 async function connect() {
   if (database) return database;
-  if (!uri) throw new Error('MONGODB_URI is required');
+  const uri = mongoUri();
+  const dbName = mongoDbName();
+  if (!uri) throw new Error('MONGODB_URI is required. In Vercel, add it under Project Settings > Environment Variables and redeploy.');
   client = new MongoClient(uri, {
     appName: process.env.MONGODB_APP_NAME || 'Desi Mastaani Matka Kulfi',
     serverSelectionTimeoutMS: Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || 5000),
@@ -34,7 +69,7 @@ async function connect() {
 }
 
 async function ensureIndexes() {
-  const db = database || client.db(dbName);
+  const db = database || client.db(mongoDbName());
   await Promise.all([
     db.collection('users').createIndex({ email: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
     db.collection('items').createIndex({ itemCode: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
@@ -212,4 +247,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { connect, collections, seedIfEmpty, todayBounds, money, makeBillNumber, objectId, withTransaction, close };
+module.exports = { connect, collections, seedIfEmpty, todayBounds, money, makeBillNumber, objectId, withTransaction, close, databaseConfigSummary, redactMongoUri };

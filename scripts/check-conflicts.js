@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
-const { readFileSync } = require('node:fs');
+const { existsSync, readFileSync } = require('node:fs');
 
 const marker = /^(<{7}|={7}|>{7})/m;
 const textExtensions = new Set([
@@ -15,10 +15,20 @@ function isLikelyTextFile(file) {
   return lastDot === -1 || textExtensions.has(file.slice(lastDot));
 }
 
-const files = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
-  .split('\n')
-  .filter(Boolean)
-  .filter(isLikelyTextFile);
+function trackedTextFiles() {
+  return execFileSync('git', ['ls-files'], { encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean)
+    .filter(isLikelyTextFile);
+}
+
+const requestedFiles = process.argv.slice(2);
+const files = (requestedFiles.length ? requestedFiles : trackedTextFiles())
+  .filter((file) => {
+    if (existsSync(file)) return true;
+    console.error(`Conflict check skipped missing file: ${file}`);
+    return false;
+  });
 
 const bad = [];
 for (const file of files) {
@@ -32,4 +42,5 @@ if (bad.length) {
   process.exit(1);
 }
 
-console.log(`No conflict markers found in ${files.length} tracked text file(s).`);
+const scope = requestedFiles.length ? 'requested file(s)' : 'tracked text file(s)';
+console.log(`No conflict markers found in ${files.length} ${scope}.`);

@@ -55,13 +55,15 @@ This app is Vercel-ready through `api/index.js` and `vercel.json`. The serverles
 
 Set these Vercel environment variables before deploying:
 
-- `MONGODB_URI` with your MongoDB Atlas connection string.
+- `MONGODB_URI` with your MongoDB Atlas connection string. Do not commit the real URI to git; paste it into Vercel Project Settings > Environment Variables for Production/Preview/Development and redeploy.
 - `MONGODB_DB` (optional, defaults to `kulfi_franchise`).
 - `JWT_SECRET` with a long random value.
 - `COOKIE_NAME` (optional, defaults to `kulfi_session`).
 - `MONGODB_SERVER_SELECTION_TIMEOUT_MS` / `MONGODB_CONNECT_TIMEOUT_MS` (optional, default to `5000`) to keep serverless requests from waiting on MongoDB's longer default timeout if Atlas networking or credentials are misconfigured.
 
-After changing from any older SQLite/filesystem build, redeploy the latest commit so Vercel no longer runs stale code that references `/var/task/data`. If Vercel still returns a function error, verify `MONGODB_URI` is set in the Vercel project and that MongoDB Atlas Network Access allows your deployment traffic, for example with an appropriate production allowlist.
+For the MongoDB Atlas string you provided, set it in Vercel exactly as the `MONGODB_URI` value, set `MONGODB_DB=kulfi_franchise`, redeploy, and confirm Atlas Network Access allows Vercel serverless traffic. If Vercel still returns a function error, open the Vercel Function logs; this app now reports whether the URI is missing and logs a redacted MongoDB target for debugging.
+
+After changing from any older SQLite/filesystem build, redeploy the latest commit so Vercel no longer runs stale code that references `/var/task/data`.
 
 ## Conflict-resolution validation
 
@@ -71,7 +73,13 @@ This branch includes a small conflict-marker check for the files that commonly c
 npm run check:conflicts
 ```
 
-The check now scans every tracked text file, including `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js`, for unresolved merge markers.
+For the exact files GitHub most recently reported (`README.md`, `src/db.js`, and `src/server.js`), run:
+
+```bash
+npm run check:reported-conflicts
+```
+
+The main check scans every tracked text file, including `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js`, for unresolved merge markers. The checker also accepts explicit file paths, which is what `check:reported-conflicts` uses for the currently reported GitHub conflict list.
 
 
 If GitHub still reports PR conflicts after this command passes locally, update the branch from the target branch in GitHub or with `git merge`/`git rebase`; the application files in this branch contain no unresolved Git conflict marker lines.
