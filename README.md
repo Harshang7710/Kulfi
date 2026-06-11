@@ -73,7 +73,13 @@ This branch includes a small conflict-marker check for the files that commonly c
 npm run check:conflicts
 ```
 
-The check now scans every tracked text file, including `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js`, for unresolved merge markers.
+For the exact files GitHub most recently reported (`README.md`, `src/db.js`, and `src/server.js`), run:
+
+```bash
+npm run check:reported-conflicts
+```
+
+The main check scans every tracked text file, including `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js`, for unresolved merge markers. The checker also accepts explicit file paths, which is what `check:reported-conflicts` uses for the currently reported GitHub conflict list.
 
 
 If GitHub still reports PR conflicts after this command passes locally, update the branch from the target branch in GitHub or with `git merge`/`git rebase`; the application files in this branch contain no unresolved Git conflict marker lines.
