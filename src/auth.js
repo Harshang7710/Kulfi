@@ -6,7 +6,7 @@ const COOKIE_NAME = process.env.COOKIE_NAME || 'kulfi_session';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-change-this-secret';
 
 function signSession(user) {
-  return jwt.sign({ id: String(user._id || user.id), role: user.role, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
+  return jwt.sign({ id: String(user._id || user.id), role: user.role, name: user.name, email: user.email, userId: user.userId }, JWT_SECRET, { expiresIn: '12h' });
 }
 
 function setSessionCookie(res, user) {
@@ -46,22 +46,34 @@ async function attachUser(req, res, next) {
 
 function requireAuth(req, res, next) {
   if (!req.user) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+  if (req.user.mustChangePassword && req.path !== '/password-setup' && req.path !== '/logout') {
+    return res.redirect(`/password-setup?next=${encodeURIComponent(req.originalUrl)}`);
+  }
   next();
 }
 
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+    if (req.user.mustChangePassword && req.path !== '/password-setup' && req.path !== '/logout') {
+      return res.redirect(`/password-setup?next=${encodeURIComponent(req.originalUrl)}`);
+    }
     if (!roles.includes(req.user.role)) return res.redirect(req.user.role === 'owner' ? '/owner' : '/manager');
     next();
   };
 }
 
-async function login(email, password) {
-  const normalizedEmail = String(email || '').trim();
-  const user = await collections().users.findOne({ email: normalizedEmail, active: true }, { collation: { locale: 'en', strength: 2 } });
+async function login(identifier, password) {
+  const normalizedIdentifier = String(identifier || '').trim();
+  const user = await collections().users.findOne({
+    active: true,
+    $or: [
+      { email: normalizedIdentifier },
+      { userId: normalizedIdentifier }
+    ]
+  }, { collation: { locale: 'en', strength: 2 } });
   if (!user || !bcrypt.compareSync(password || '', user.passwordHash)) return null;
-  return { _id: user._id, id: String(user._id), name: user.name, email: user.email, role: user.role, active: user.active };
+  return { _id: user._id, id: String(user._id), name: user.name, email: user.email, userId: user.userId, role: user.role, active: user.active, mustChangePassword: Boolean(user.mustChangePassword) };
 }
 
 module.exports = { attachUser, requireAuth, requireRole, login, setSessionCookie, clearSessionCookie };

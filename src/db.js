@@ -72,6 +72,7 @@ async function ensureIndexes() {
   const db = database || client.db(mongoDbName());
   await Promise.all([
     db.collection('users').createIndex({ email: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
+    db.collection('users').createIndex({ userId: 1 }, { unique: true, sparse: true, collation: { locale: 'en', strength: 2 } }),
     db.collection('items').createIndex({ itemCode: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
     db.collection('items').createIndex({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
     db.collection('inventory').createIndex({ itemId: 1 }, { unique: true }),
@@ -107,18 +108,22 @@ async function seedIfEmpty() {
   const passwordHash = bcrypt.hashSync('password123', 12);
   const ownerResult = await c.users.insertOne({
     name: 'Owner Admin',
+    userId: '1001',
     email: 'owner@desimastaani.test',
     passwordHash,
     role: 'owner',
+    mustChangePassword: false,
     active: true,
     createdAt: now,
     updatedAt: now
   });
   const managerResult = await c.users.insertOne({
     name: 'Cart Manager',
+    userId: '2001',
     email: 'manager@desimastaani.test',
     passwordHash,
     role: 'manager',
+    mustChangePassword: false,
     active: true,
     createdAt: now,
     updatedAt: now
