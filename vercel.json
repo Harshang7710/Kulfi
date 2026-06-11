@@ -2,13 +2,13 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "views/**",
-        "public/**"
-      ]
+      "includeFiles": "{views/**,public/**}"
     }
   },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
+    {
+      "source": "/(.*)",
+      "destination": "/api/index.js"
+    }
   ]
 }
