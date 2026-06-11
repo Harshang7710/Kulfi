@@ -41,6 +41,8 @@ const esc = (s = '') => String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<':
 const number = (v) => Number(v || 0);
 const int = (v) => Math.trunc(Number(v || 0));
 const bool = (v) => v === true || v === '1' || v === 'on';
+const optionalNumber = (v, fallback = 0) => String(v ?? '').trim() === '' ? fallback : Number(v);
+const stockDisplay = (row) => ({ secondBoxes: Number(row.secondFridgeQty || 0), mainPieces: Number(row.mainFridgeQty || 0) * Number(row.piecesPerBox || 0) });
 
 function render(req, res, view, data = {}) {
   const baseData = { ...data, user: req.user, path: req.path, notice: notice(req), money };
@@ -182,10 +184,28 @@ app.use(aw(attachUser));
 app.get('/', (req, res) => res.redirect(req.user ? (req.user.role === 'owner' ? '/owner' : '/manager') : '/login'));
 app.get('/login', (req, res) => req.user ? res.redirect(req.user.role === 'owner' ? '/owner' : '/manager') : render(req, res, 'login', { title: 'Login', error: req.query.err, next: req.query.next }));
 app.post('/login', aw(async (req, res) => {
-  const user = await login(req.body.email, req.body.password);
-  if (!user) return res.redirect('/login?err=Invalid%20email%20or%20password');
+  const user = await login(req.body.identifier || req.body.email, req.body.password);
+  if (!user) return res.redirect('/login?err=Invalid%20user%20ID/email%20or%20password');
   setSessionCookie(res, user);
+  if (user.mustChangePassword) return res.redirect(`/password-setup?next=${encodeURIComponent(req.body.next || '')}`);
   res.redirect(req.body.next || (user.role === 'owner' ? '/owner' : '/manager'));
+}));
+app.get('/password-setup', aw(async (req, res) => {
+  if (!req.user) return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+  render(req, res, 'login', { title: 'Set New Password', mode: 'passwordSetup', error: req.query.err, next: req.query.next });
+}));
+app.post('/password-setup', aw(async (req, res) => {
+  if (!req.user) return res.redirect('/login');
+  try {
+    const data = z.object({ password: z.string().min(8), confirmPassword: z.string().min(8), next: z.string().optional() }).parse(req.body);
+    if (data.password !== data.confirmPassword) throw new Error('New password and confirmation do not match');
+    await collections().users.updateOne({ _id: objectId(req.user.id) }, { $set: { passwordHash: bcrypt.hashSync(data.password, 12), mustChangePassword: false, updatedAt: new Date() } });
+    const user = await collections().users.findOne({ _id: objectId(req.user.id) });
+    setSessionCookie(res, { ...user, mustChangePassword: false });
+    res.redirect(data.next || (user.role === 'owner' ? '/owner' : '/manager'));
+  } catch (e) {
+    res.redirect(`/password-setup?err=${encodeURIComponent(e.message)}&next=${encodeURIComponent(req.body.next || '')}`);
+  }
 }));
 app.post('/logout', (req, res) => { clearSessionCookie(res); res.redirect('/login'); });
 app.get('/health', aw(async (req, res) => {
@@ -210,14 +230,17 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
     online: sales.reduce((a, s) => a + Number(s.onlineAmount || 0), 0)
   };
   const pieces = saleItems.reduce((a, i) => a + Number(i.quantity || 0), 0);
-  const invValue = inventory.reduce((a, i) => a + (i.mainFridgeQty + i.secondFridgeQty) * i.mrp, 0);
+  const profitValue = saleItems.reduce((a, si) => {
+    const item = inventory.find(i => String(i._id) === String(si.itemId));
+    return a + Number(si.lineTotal || 0) * Number(item?.profitPercentage || 0) / 100;
+  }, 0);
   const main = inventory.reduce((a, i) => a + i.mainFridgeQty, 0);
   const second = inventory.reduce((a, i) => a + i.secondFridgeQty, 0);
   const low = inventory.filter(i => i.mainFridgeQty <= i.lowStockThreshold).length;
   const stats = [
     ['Today’s total sales amount', `₹${money(summary.total)}`], ['Today’s total pieces sold', pieces],
     ['Today’s cash collection total', `₹${money(summary.cash)}`], ['Today’s online payment total', `₹${money(summary.online)}`],
-    ['Current total inventory value', `₹${money(invValue)}`], ['Main fridge stock total', main],
+    ['Profit value', `₹${money(profitValue)}`], ['Main fridge stock total', main],
     ['Second fridge stock total', second], ['Low-stock item count', low]
   ].map(([label, value]) => ({ label, value }));
   const trend = [];
@@ -246,19 +269,19 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
     { $sort: { createdAt: -1 } }, { $limit: 8 },
     { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } }, { $unwind: '$item' }
   ]).toArray();
-  render(req, res, 'dashboard', { title: 'Owner Dashboard', stats, summary, trend, inventory, topItems, managers: managerStats, movements: movements.map(m => ({ ...m, name: m.item.name })) });
+  render(req, res, 'dashboard', { title: 'Owner Dashboard', stats, summary, trend, inventory: inventory.filter(i => i.mainFridgeQty <= i.lowStockThreshold), topItems, managers: managerStats, movements: movements.map(m => ({ ...m, name: m.item.name })) });
 }));
 
 app.get('/owner/items', requireRole('owner'), aw(async (req, res) => {
   const rows = await itemRows(false);
-  const form = `<form method="post" action="/owner/items" class="form-grid"><label>Item ID<input name="itemCode" required></label><label>Name<input name="name" required></label><label>MRP<input name="mrp" type="number" min="0.01" step="0.01" required></label><label>Profit %<input name="profitPercentage" type="number" min="0" step="0.01" value="0"></label><label>Pieces/box<input name="piecesPerBox" type="number" min="1" value="24"></label><label>Low threshold<input name="lowStockThreshold" type="number" min="0" value="0"></label><button class="primary">Add item</button></form>`;
-  const table = `<table><thead><tr><th>ID</th><th>Name</th><th>MRP</th><th>Box</th><th>Low</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.itemCode)}</td><td>${esc(r.name)}</td><td>₹${money(r.mrp)}</td><td>${r.piecesPerBox}</td><td>${r.lowStockThreshold}</td><td><span class="badge ${r.active ? 'ok' : 'danger'}">${r.active ? 'Active' : 'Inactive'}</span> <span class="badge ${r.hidden ? 'warn' : 'ok'}">${r.hidden ? 'Hidden' : 'Visible'}</span></td><td><form class="actions" method="post" action="/owner/items/${r.id}/toggle"><button name="field" value="active" class="btn secondary">Toggle active</button><button name="field" value="hidden" class="btn secondary">Hide/unhide</button></form></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No items yet.</td></tr>'}</tbody></table>`;
+  const form = `<form method="post" action="/owner/items" class="form-grid"><label>Numeric Item ID<input name="itemCode" type="number" min="1" step="1" required></label><label>Name<input name="name" required></label><label>MRP<input name="mrp" type="number" min="0.01" step="0.01" required></label><label>Profit %<input name="profitPercentage" type="number" min="0" step="0.01" placeholder="Blank until known"></label><label>Pieces/box<input name="piecesPerBox" type="number" min="1" step="1" placeholder="Blank"></label><label>Low threshold<input name="lowStockThreshold" type="number" min="0" step="1" placeholder="Blank"></label><button class="primary">Add item</button></form>`;
+  const table = `<form method="post" action="/owner/items/update"><table><thead><tr><th>ID</th><th>Name</th><th>MRP</th><th>Profit %</th><th>Pieces/box</th><th>Low</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td><input name="itemCode_${r.id}" type="number" min="1" step="1" value="${esc(r.itemCode)}" required></td><td><input name="name_${r.id}" value="${esc(r.name)}" required></td><td><input name="mrp_${r.id}" type="number" min="0.01" step="0.01" value="${money(r.mrp)}" required></td><td><input name="profitPercentage_${r.id}" type="number" min="0" step="0.01" value="${r.profitPercentage ?? ''}"></td><td><input name="piecesPerBox_${r.id}" type="number" min="1" step="1" value="${r.piecesPerBox ?? ''}"></td><td><input name="lowStockThreshold_${r.id}" type="number" min="0" step="1" value="${r.lowStockThreshold ?? ''}"></td><td><label class="inline-check"><input type="checkbox" name="active_${r.id}" ${r.active ? 'checked' : ''}> Active</label><label class="inline-check"><input type="checkbox" name="hidden_${r.id}" ${r.hidden ? 'checked' : ''}> Hidden</label></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No items yet.</td></tr>'}</tbody></table><p class="actions"><button class="primary">Save catalog changes</button></p></form>`;
   render(req, res, 'table-page', { title: 'Item Catalog', form, table });
 }));
 
 app.post('/owner/items', requireRole('owner'), aw(async (req, res) => {
   try {
-    const schema = z.object({ itemCode: z.string().min(1), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.coerce.number().min(0), piecesPerBox: z.coerce.number().int().positive(), lowStockThreshold: z.coerce.number().int().min(0) });
+    const schema = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)) });
     const data = schema.parse(req.body);
     const now = new Date();
     await withTransaction(async (c, session) => {
@@ -271,13 +294,26 @@ app.post('/owner/items', requireRole('owner'), aw(async (req, res) => {
   } catch (e) { redirectWith(res, '/owner/items', 'err', e.message); }
 }));
 
-app.post('/owner/items/:id/toggle', requireRole('owner'), aw(async (req, res) => {
-  const field = req.body.field === 'hidden' ? 'hidden' : 'active';
-  const c = collections();
-  const item = await c.items.findOne({ _id: objectId(req.params.id) });
-  if (!item) return redirectWith(res, '/owner/items', 'err', 'Item not found');
-  await c.items.updateOne({ _id: item._id }, { $set: { [field]: !item[field], updatedAt: new Date() } });
-  redirectWith(res, '/owner/items', 'ok', 'Item updated');
+app.post('/owner/items/update', requireRole('owner'), aw(async (req, res) => {
+  try {
+    const rows = await itemRows(false);
+    await withTransaction(async (c, session) => {
+      for (const r of rows) {
+        const data = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)) }).parse({
+          itemCode: req.body[`itemCode_${r.id}`],
+          name: req.body[`name_${r.id}`],
+          mrp: req.body[`mrp_${r.id}`],
+          profitPercentage: req.body[`profitPercentage_${r.id}`],
+          piecesPerBox: req.body[`piecesPerBox_${r.id}`],
+          lowStockThreshold: req.body[`lowStockThreshold_${r.id}`]
+        });
+        const duplicate = await c.items.findOne({ _id: { $ne: r._id }, $or: [{ itemCode: data.itemCode }, { name: data.name }] }, { collation: { locale: 'en', strength: 2 }, session });
+        if (duplicate) throw new Error(`Duplicate item ID or name near ${data.name}`);
+        await c.items.updateOne({ _id: r._id }, { $set: { ...data, active: bool(req.body[`active_${r.id}`]), hidden: bool(req.body[`hidden_${r.id}`]), updatedAt: new Date() } }, { session });
+      }
+    });
+    redirectWith(res, '/owner/items', 'ok', 'Catalog changes saved');
+  } catch (e) { redirectWith(res, '/owner/items', 'err', e.message); }
 }));
 
 app.get('/owner/inventory', requireRole('owner'), aw(async (req, res) => {
@@ -320,7 +356,7 @@ app.get('/owner/movements', requireRole('owner'), aw(async (req, res) => {
 app.get('/owner/reports', requireRole('owner'), aw(async (req, res) => {
   const range = dateRange(req.query);
   const report = await reports(range);
-  const intro = `<form class="form-grid" method="get"><label>From<input type="date" name="from" value="${range.fromDate}"></label><label>To<input type="date" name="to" value="${range.toDate}"></label><button class="primary">Filter</button><a class="btn secondary" href="/owner/reports.csv?from=${range.fromDate}&to=${range.toDate}">Export CSV</a></form><section class="grid stats"><article class="card stat"><span>Gross sales</span><strong>₹${money(report.totals.gross)}</strong></article><article class="card stat"><span>Returns</span><strong>₹${money(report.totals.returns)}</strong></article><article class="card stat"><span>Net sales</span><strong>₹${money(report.totals.gross - report.totals.returns)}</strong></article><article class="card stat"><span>Pieces</span><strong>${report.totals.pieces}</strong></article></section>`;
+  const intro = `<form class="form-grid" method="get"><label>From<input type="date" name="from" value="${range.fromDate}"></label><label>To<input type="date" name="to" value="${range.toDate}"></label><button class="primary">Filter</button><a class="btn secondary" href="/owner/reports.csv?from=${range.fromDate}&to=${range.toDate}">Export CSV</a></form><section class="grid stats"><article class="card stat"><span>Gross sales</span><span class="stat-value">₹${money(report.totals.gross)}</span></article><article class="card stat"><span>Returns</span><span class="stat-value">₹${money(report.totals.returns)}</span></article><article class="card stat"><span>Net sales</span><span class="stat-value">₹${money(report.totals.gross - report.totals.returns)}</span></article><article class="card stat"><span>Pieces</span><span class="stat-value">${report.totals.pieces}</span></article></section>`;
   const table = `<table><thead><tr><th>Date</th><th>Bill</th><th>Manager</th><th>Type</th><th>Item</th><th>Qty</th><th>MRP</th><th>Free</th><th>Line</th><th>Cash</th><th>Online</th><th>Remark</th></tr></thead><tbody>${report.rows.map(r => `<tr><td>${new Date(r.createdAt).toLocaleString()}</td><td>${r.billNumber}</td><td>${esc(r.managerName)}</td><td>${r.type}</td><td>${esc(r.itemName)}</td><td>${r.quantity}</td><td>₹${money(r.mrp)}</td><td>${r.isFree ? 'Yes' : 'No'}</td><td>₹${money(r.lineTotal)}</td><td>₹${money(r.cashAmount)}</td><td>₹${money(r.onlineAmount)}</td><td>${esc(r.remark || '')}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">No sales in this date range.</td></tr>'}</tbody></table>`;
   render(req, res, 'table-page', { title: 'Sales Reports', intro, table });
 }));
@@ -336,18 +372,18 @@ app.get('/owner/reports.csv', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/users', requireRole('owner'), aw(async (req, res) => {
   const rows = (await collections().users.find({}, { projection: { passwordHash: 0 } }).sort({ createdAt: -1 }).toArray()).map(mapDoc);
-  const form = `<form method="post" action="/owner/users" class="form-grid"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="manager">Cart Manager</option><option value="owner">Owner</option></select></label><label>Temporary password<input name="password" type="password" minlength="8" required></label><button class="primary">Create user</button></form>`;
-  const table = `<table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${r.role}</td><td><span class="badge ${r.active ? 'ok' : 'danger'}">${r.active ? 'Active' : 'Inactive'}</span></td><td><form class="actions" method="post" action="/owner/users/${r.id}/toggle"><button class="btn secondary">Activate/deactivate</button></form></td></tr>`).join('')}</tbody></table>`;
+  const form = `<form method="post" action="/owner/users" class="form-grid"><label>Unique User ID<input name="userId" required placeholder="Numeric or staff code"></label><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="manager">Cart Manager</option><option value="owner">Owner</option></select></label><label>Temporary password<input name="password" type="password" minlength="8" required></label><button class="primary">Create user</button></form>`;
+  const table = `<table><thead><tr><th>User ID</th><th>Name</th><th>Email</th><th>Role</th><th>Password setup</th><th>Active</th><th>Actions</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.userId || '—')}</td><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${r.role}</td><td><span class="badge ${r.mustChangePassword ? 'warn' : 'ok'}">${r.mustChangePassword ? 'Required' : 'Complete'}</span></td><td><span class="badge ${r.active ? 'ok' : 'danger'}">${r.active ? 'Active' : 'Inactive'}</span></td><td><form class="actions" method="post" action="/owner/users/${r.id}/toggle"><button class="btn secondary">Activate/deactivate</button></form></td></tr>`).join('')}</tbody></table>`;
   render(req, res, 'table-page', { title: 'User Management', form, table });
 }));
 
 app.post('/owner/users', requireRole('owner'), aw(async (req, res) => {
   try {
-    const data = z.object({ name: z.string().min(1), email: z.string().email(), role: z.enum(['owner', 'manager']), password: z.string().min(8) }).parse(req.body);
+    const data = z.object({ userId: z.string().min(1), name: z.string().min(1), email: z.string().email(), role: z.enum(['owner', 'manager']), password: z.string().min(8) }).parse(req.body);
     const now = new Date();
-    await collections().users.insertOne({ name: data.name, email: data.email, role: data.role, passwordHash: bcrypt.hashSync(data.password, 12), active: true, createdAt: now, updatedAt: now });
+    await collections().users.insertOne({ userId: data.userId, name: data.name, email: data.email, role: data.role, passwordHash: bcrypt.hashSync(data.password, 12), mustChangePassword: true, active: true, createdAt: now, updatedAt: now });
     redirectWith(res, '/owner/users', 'ok', 'User created successfully');
-  } catch (e) { redirectWith(res, '/owner/users', 'err', e.code === 11000 ? 'Duplicate email not allowed' : e.message); }
+  } catch (e) { redirectWith(res, '/owner/users', 'err', e.code === 11000 ? 'Duplicate email or user ID not allowed' : e.message); }
 }));
 
 app.post('/owner/users/:id/toggle', requireRole('owner'), aw(async (req, res) => {
@@ -360,33 +396,35 @@ app.post('/owner/users/:id/toggle', requireRole('owner'), aw(async (req, res) =>
 
 app.get('/manager', requireRole('manager'), aw(async (req, res) => {
   const s = await todaySummary(req.user.id);
-  const intro = `<section class="grid stats"><article class="card stat"><span>Today’s pieces sold</span><strong>${s.pieces}</strong></article><article class="card stat"><span>Today’s sales amount</span><strong>₹${money(s.total)}</strong></article><article class="card stat"><span>Cash amount</span><strong>₹${money(s.cash)}</strong></article><article class="card stat"><span>Online amount</span><strong>₹${money(s.online)}</strong></article></section><section class="grid two"><a class="card" href="/manager/pos"><h2>Open POS Billing</h2><p>Sell from Main Fridge and accept cash/online split payments.</p></a><a class="card" href="/manager/returns"><h2>Process Returns</h2><p>Return your own sale lines from today only.</p></a></section>`;
+  const intro = `<section class="grid stats"><article class="card stat"><span>Today’s pieces sold</span><span class="stat-value">${s.pieces}</span></article><article class="card stat"><span>Today’s sales amount</span><span class="stat-value">₹${money(s.total)}</span></article><article class="card stat"><span>Cash amount</span><span class="stat-value">₹${money(s.cash)}</span></article><article class="card stat"><span>Online amount</span><span class="stat-value">₹${money(s.online)}</span></article></section>`;
   render(req, res, 'table-page', { title: 'Manager Home', intro, table: '' });
 }));
 
 app.get('/manager/stock', requireRole('manager'), aw(async (req, res) => {
   const rows = await itemRows(true);
-  const table = `<table><thead><tr><th>Item</th><th>Main Fridge</th><th>Second Fridge</th><th>Low threshold</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${r.mainFridgeQty}</td><td>${r.secondFridgeQty}</td><td>${r.lowStockThreshold}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Available'}</span></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No stock available.</td></tr>'}</tbody></table>`;
+  const table = `<table><thead><tr><th>Item</th><th>Main Fridge total pcs</th><th>Second Fridge boxes</th><th>Pieces/box</th><th>Low threshold</th><th>Status</th></tr></thead><tbody>${rows.map(r => { const display = stockDisplay(r); return `<tr><td>${esc(r.name)}</td><td>${display.mainPieces}</td><td>${display.secondBoxes}</td><td>${r.piecesPerBox}</td><td>${r.lowStockThreshold}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Available'}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="empty">No stock available.</td></tr>'}</tbody></table>`;
   render(req, res, 'table-page', { title: 'Available Stock', table });
 }));
 
 app.get('/manager/pos', requireRole('manager'), aw(async (req, res) => {
   const rows = await itemRows(true);
-  const body = `<form method="post" action="/manager/pos" class="pos-grid"><section class="items-grid">${rows.map(r => `<article class="item-card ${r.mainFridgeQty <= r.lowStockThreshold ? 'low' : ''}"><h3>${esc(r.name)}</h3><p>MRP ₹${money(r.mrp)} · Main ${r.mainFridgeQty} pcs · Second ${r.secondFridgeQty} pcs</p><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Ready'}</span><div class="qty-row"><input name="qty_${r.id}" type="number" min="0" max="${r.mainFridgeQty}" placeholder="Sale qty"><label><input type="checkbox" name="free_${r.id}" value="1"> Free</label></div><div class="qty-row"><input name="transfer_${r.id}" type="number" min="0" max="${r.secondFridgeQty}" placeholder="Transfer pcs"><button formaction="/manager/transfer" name="itemId" value="${r.id}" class="btn secondary">Transfer</button></div></article>`).join('') || '<p class="empty">No active items are available.</p>'}</section><aside class="card"><h2>Payment</h2><label>Cash amount<input name="cashAmount" type="number" min="0" step="0.01" value="0"></label><label>Online amount<input name="onlineAmount" type="number" min="0" step="0.01" value="0"></label><label>Bill remark<textarea name="remark" rows="3"></textarea></label><p class="muted">Cash + online must equal the non-free item total. Stock is reduced from Main Fridge only.</p><button class="primary">Save bill</button></aside></form>`;
+  const body = `<form method="post" action="/manager/pos" class="pos-grid pos-billing" data-pos-form><section class="card"><div class="pos-list-head"><span>Item details</span><span>Main total pcs</span><span>Second boxes</span><span>Sale qty</span><span>Line amount</span><span>Transfer</span></div><div class="items-list">${rows.map(r => { const display = stockDisplay(r); return `<article class="item-row ${r.mainFridgeQty <= r.lowStockThreshold ? 'low' : ''}" data-price="${Number(r.mrp || 0)}"><div class="item-main"><h3>${esc(r.name)}</h3><p>MRP ₹${money(r.mrp)} · ${r.piecesPerBox} pcs/box</p><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Ready'}</span></div><div class="stock-pill">${display.mainPieces}</div><div class="stock-pill">${display.secondBoxes}</div><div class="qty-controls"><button class="qty-btn" type="button" data-qty-step="-1">−</button><input class="sale-qty" name="qty_${r.id}" type="number" min="0" max="${r.mainFridgeQty}" value="0" inputmode="numeric"><button class="qty-btn" type="button" data-qty-step="1">+</button><label class="inline-check"><input class="free-toggle" type="checkbox" name="free_${r.id}" value="1"> Free</label></div><output class="line-total">₹0.00</output><div class="transfer-controls"><input name="transfer_${r.id}" type="number" min="0" max="${r.secondFridgeQty}" placeholder="Boxes"><button formaction="/manager/transfer" name="itemId" value="${r.id}" class="btn secondary">Transfer</button></div></article>`; }).join('') || '<p class="empty">No active items are available.</p>'}</div></section><aside class="card payment-card"><h2>Payment</h2><label>Total Amount<input name="totalAmountPreview" data-total-amount type="number" min="0" step="0.01" value="0.00" readonly></label><div class="payment-actions"><button class="btn secondary" type="button" data-pay-mode="cash">Pay in Cash</button><button class="btn secondary" type="button" data-pay-mode="online">Pay Online</button></div><label>Cash Amount<input name="cashAmount" data-cash-amount type="number" min="0" step="0.01" value="0.00"></label><label>Online Amount<input name="onlineAmount" data-online-amount type="number" min="0" step="0.01" value="0.00"></label><label>Bill remark<textarea name="remark" rows="3"></textarea></label><button class="primary">Save bill</button></aside></form>`;
   render(req, res, 'table-page', { title: 'POS Billing', intro: body, table: '' });
 }));
 
 app.post('/manager/transfer', requireRole('manager'), aw(async (req, res) => {
   try {
     const itemId = objectId(req.body.itemId);
-    const qty = int(req.body[`transfer_${req.body.itemId}`]);
-    if (qty <= 0) throw new Error('Transfer quantity is required');
+    const boxes = int(req.body[`transfer_${req.body.itemId}`]);
+    if (boxes <= 0) throw new Error('Transfer box count is required');
+    let qty = boxes;
     await withTransaction(async (c, session) => {
       const item = await c.items.findOne({ _id: itemId, active: true, hidden: false }, { session });
       if (!item) throw new Error('Item is inactive or not found');
+      qty = boxes * Number(item.piecesPerBox || 1);
       const updated = await c.inventory.updateOne({ itemId, secondFridgeQty: { $gte: qty } }, { $inc: { secondFridgeQty: -qty, mainFridgeQty: qty }, $set: { updatedAt: new Date() } }, { session });
       if (!updated.modifiedCount) throw new Error('Second Fridge stock is insufficient');
-      await c.stockMovements.insertOne({ itemId, movementType: 'transfer_second_to_main', quantityPieces: qty, quantityBoxes: qty / item.piecesPerBox, sourceLocation: 'second_fridge', destinationLocation: 'main_fridge', notes: 'Manager POS transfer', createdBy: objectId(req.user.id), createdAt: new Date() }, { session });
+      await c.stockMovements.insertOne({ itemId, movementType: 'transfer_second_to_main', quantityPieces: qty, quantityBoxes: boxes, sourceLocation: 'second_fridge', destinationLocation: 'main_fridge', notes: 'Manager POS transfer', createdBy: objectId(req.user.id), createdAt: new Date() }, { session });
     });
     redirectWith(res, '/manager/pos', 'ok', 'Stock transferred to Main Fridge');
   } catch (e) { redirectWith(res, '/manager/pos', 'err', e.message); }
