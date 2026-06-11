@@ -1,0 +1,26 @@
+<svg width="1536" height="1024" viewBox="0 0 1536 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Desi Mastaani Matka Kulfi logo</title>
+  <desc id="desc">A red two-lobed Mastaani Matka Kulfi brand mark with cream, gold, and white lettering.</desc>
+  <defs>
+    <radialGradient id="matkaGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(759 469) rotate(22) scale(611 400)">
+      <stop offset="0" stop-color="#ff7b73"/>
+      <stop offset="0.52" stop-color="#ff5d5f"/>
+      <stop offset="1" stop-color="#e83f46"/>
+    </radialGradient>
+    <filter id="softShadow" x="144" y="135" width="1260" height="790" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#7c1015" flood-opacity="0.22"/>
+    </filter>
+    <filter id="letterShadow" x="0" y="0" width="1536" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="3" dy="5" stdDeviation="2" flood-color="#9e1d22" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <g filter="url(#softShadow)">
+    <path d="M1175 181c138 45 228 143 239 266 12 135-78 256-229 308-124 43-291 34-410 81-78 31-134 86-163 155-142-14-275-59-356-137-86-82-123-190-99-298 25-113 113-211 229-257 112-44 250-37 357 22 91-119 272-188 432-140Z" fill="url(#matkaGlow)"/>
+    <path d="M742 321c91-119 272-188 432-140 138 45 228 143 239 266 10 114-53 220-167 282 61-59 89-131 81-210-12-123-101-221-239-266-130-39-274 0-369 85l23-17Z" fill="#ff6b68" opacity="0.36"/>
+  </g>
+  <g filter="url(#letterShadow)">
+    <text x="832" y="335" transform="rotate(-2 832 335)" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="130" font-weight="700" fill="#ffd45b" stroke="#9c1b20" stroke-width="3" paint-order="stroke fill">Desi</text>
+    <text x="729" y="548" transform="rotate(-6 729 548)" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="210" font-weight="900" fill="#fffaf0" stroke="#b42028" stroke-width="4" paint-order="stroke fill">Mastaani</text>
+    <text x="786" y="721" transform="rotate(-4 786 721)" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="88" letter-spacing="8" fill="#ffd45b" stroke="#c92b2f" stroke-width="2" paint-order="stroke fill">MATKA KULFI</text>
+  </g>
+</svg>
