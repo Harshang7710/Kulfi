@@ -70,7 +70,10 @@ This branch includes a small conflict-marker check for the files that commonly c
 npm run check:conflicts
 ```
 
-The check scans `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, `src/server.js`, `api/index.js`, and `vercel.json` for unresolved merge markers.
+The check now scans every tracked text file, including `.env.example`, `README.md`, `package.json`, `public/logo.svg`, `public/styles.css`, `src/auth.js`, `src/db.js`, and `src/server.js`, for unresolved merge markers.
+
+
+If GitHub still reports PR conflicts after this command passes locally, update the branch from the target branch in GitHub or with `git merge`/`git rebase`; the application files in this branch contain no unresolved Git conflict marker lines.
 
 ## Seed logins
 
