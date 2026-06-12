@@ -42,7 +42,7 @@ const number = (v) => Number(v || 0);
 const int = (v) => Math.trunc(Number(v || 0));
 const bool = (v) => v === true || v === '1' || v === 'on';
 const optionalNumber = (v, fallback = 0) => String(v ?? '').trim() === '' ? fallback : Number(v);
-const stockDisplay = (row) => ({ secondBoxes: Number(row.secondFridgeQty || 0), mainPieces: Number(row.mainFridgeQty || 0) });
+const stockDisplay = (row) => ({ secondBoxes: Number(row.secondFridgeQty || 0), mainPieces: Number(row.mainFridgeQty || 0) * Number(row.piecesPerBox || 0) });
 
 function render(req, res, view, data = {}) {
   const baseData = { ...data, user: req.user, path: req.path, notice: notice(req), money };
@@ -241,7 +241,7 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
     ['Today’s total sales amount', `₹${money(summary.total)}`], ['Today’s total pieces sold', pieces],
     ['Today’s cash collection total', `₹${money(summary.cash)}`], ['Today’s online payment total', `₹${money(summary.online)}`],
     ['Profit value', `₹${money(profitValue)}`], ['Main fridge stock total', main],
-    ['Second fridge box total', second], ['Low-stock item count', low]
+    ['Second fridge stock total', second], ['Low-stock item count', low]
   ].map(([label, value]) => ({ label, value }));
   const trend = [];
   for (let i = 6; i >= 0; i--) {
@@ -274,14 +274,14 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/items', requireRole('owner'), aw(async (req, res) => {
   const rows = await itemRows(false);
-  const form = `<form method="post" action="/owner/items" class="form-grid"><label>Numeric Item ID<input name="itemCode" type="number" min="1" step="1" required></label><label>Name<input name="name" required></label><label>MRP<input name="mrp" type="number" min="0.01" step="0.01" required></label><label>Profit %<input name="profitPercentage" type="number" min="0" step="0.01" placeholder="Blank until known"></label><label>Pieces/box<input name="piecesPerBox" type="number" min="1" step="1" placeholder="Blank"></label><label>Low threshold<input name="lowStockThreshold" type="number" min="0" step="1" placeholder="Blank"></label><label>Product image URL <small>(optional lightweight image upload alternative)</small><input name="imageUrl" type="url" placeholder="https://... or leave blank"></label><button class="primary">Add item</button></form>`;
-  const table = `<form method="post" action="/owner/items/update"><table><thead><tr><th>ID</th><th>Name</th><th>MRP</th><th>Profit %</th><th>Pieces/box</th><th>Low</th><th>Image URL</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td><input name="itemCode_${r.id}" type="number" min="1" step="1" value="${esc(r.itemCode)}" required></td><td><input name="name_${r.id}" value="${esc(r.name)}" required></td><td><input name="mrp_${r.id}" type="number" min="0.01" step="0.01" value="${money(r.mrp)}" required></td><td><input name="profitPercentage_${r.id}" type="number" min="0" step="0.01" value="${r.profitPercentage ?? ''}"></td><td><input name="piecesPerBox_${r.id}" type="number" min="1" step="1" value="${r.piecesPerBox ?? ''}"></td><td><input name="lowStockThreshold_${r.id}" type="number" min="0" step="1" value="${r.lowStockThreshold ?? ''}"></td><td><input name="imageUrl_${r.id}" type="url" value="${esc(r.imageUrl || '')}" placeholder="Optional"></td><td><label class="inline-check"><input type="checkbox" name="active_${r.id}" ${r.active ? 'checked' : ''}> Active</label><label class="inline-check"><input type="checkbox" name="hidden_${r.id}" ${r.hidden ? 'checked' : ''}> Hidden</label></td></tr>`).join('') || '<tr><td colspan="8" class="empty">No items yet.</td></tr>'}</tbody></table><p class="actions"><button class="primary">Save catalog changes</button></p></form>`;
+  const form = `<form method="post" action="/owner/items" class="form-grid"><label>Numeric Item ID<input name="itemCode" type="number" min="1" step="1" required></label><label>Name<input name="name" required></label><label>MRP<input name="mrp" type="number" min="0.01" step="0.01" required></label><label>Profit %<input name="profitPercentage" type="number" min="0" step="0.01" placeholder="Blank until known"></label><label>Pieces/box<input name="piecesPerBox" type="number" min="1" step="1" placeholder="Blank"></label><label>Low threshold<input name="lowStockThreshold" type="number" min="0" step="1" placeholder="Blank"></label><button class="primary">Add item</button></form>`;
+  const table = `<form method="post" action="/owner/items/update"><table><thead><tr><th>ID</th><th>Name</th><th>MRP</th><th>Profit %</th><th>Pieces/box</th><th>Low</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td><input name="itemCode_${r.id}" type="number" min="1" step="1" value="${esc(r.itemCode)}" required></td><td><input name="name_${r.id}" value="${esc(r.name)}" required></td><td><input name="mrp_${r.id}" type="number" min="0.01" step="0.01" value="${money(r.mrp)}" required></td><td><input name="profitPercentage_${r.id}" type="number" min="0" step="0.01" value="${r.profitPercentage ?? ''}"></td><td><input name="piecesPerBox_${r.id}" type="number" min="1" step="1" value="${r.piecesPerBox ?? ''}"></td><td><input name="lowStockThreshold_${r.id}" type="number" min="0" step="1" value="${r.lowStockThreshold ?? ''}"></td><td><label class="inline-check"><input type="checkbox" name="active_${r.id}" ${r.active ? 'checked' : ''}> Active</label><label class="inline-check"><input type="checkbox" name="hidden_${r.id}" ${r.hidden ? 'checked' : ''}> Hidden</label></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No items yet.</td></tr>'}</tbody></table><p class="actions"><button class="primary">Save catalog changes</button></p></form>`;
   render(req, res, 'table-page', { title: 'Item Catalog', form, table });
 }));
 
 app.post('/owner/items', requireRole('owner'), aw(async (req, res) => {
   try {
-    const schema = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)), imageUrl: z.string().url().optional().or(z.literal('')).transform(v => v || '') });
+    const schema = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)) });
     const data = schema.parse(req.body);
     const now = new Date();
     await withTransaction(async (c, session) => {
@@ -299,14 +299,13 @@ app.post('/owner/items/update', requireRole('owner'), aw(async (req, res) => {
     const rows = await itemRows(false);
     await withTransaction(async (c, session) => {
       for (const r of rows) {
-        const data = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)), imageUrl: z.string().url().optional().or(z.literal('')).transform(v => v || '') }).parse({
+        const data = z.object({ itemCode: z.coerce.number().int().positive().transform(String), name: z.string().min(1), mrp: z.coerce.number().positive(), profitPercentage: z.preprocess(v => optionalNumber(v, 0), z.number().min(0)), piecesPerBox: z.preprocess(v => optionalNumber(v, 1), z.number().int().positive()), lowStockThreshold: z.preprocess(v => optionalNumber(v, 0), z.number().int().min(0)) }).parse({
           itemCode: req.body[`itemCode_${r.id}`],
           name: req.body[`name_${r.id}`],
           mrp: req.body[`mrp_${r.id}`],
           profitPercentage: req.body[`profitPercentage_${r.id}`],
           piecesPerBox: req.body[`piecesPerBox_${r.id}`],
-          lowStockThreshold: req.body[`lowStockThreshold_${r.id}`],
-          imageUrl: req.body[`imageUrl_${r.id}`]
+          lowStockThreshold: req.body[`lowStockThreshold_${r.id}`]
         });
         const duplicate = await c.items.findOne({ _id: { $ne: r._id }, $or: [{ itemCode: data.itemCode }, { name: data.name }] }, { collation: { locale: 'en', strength: 2 }, session });
         if (duplicate) throw new Error(`Duplicate item ID or name near ${data.name}`);
@@ -319,7 +318,7 @@ app.post('/owner/items/update', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/inventory', requireRole('owner'), aw(async (req, res) => {
   const rows = await itemRows(false);
-  const table = `<form method="post" action="/owner/inventory"><table><thead><tr><th>Item</th><th>Main Fridge (pcs)</th><th>Second Fridge (boxes)</th><th>Total value</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td><input name="main_${r.id}" type="number" min="0" value="${r.mainFridgeQty}"></td><td><input name="second_${r.id}" type="number" min="0" value="${r.secondFridgeQty}"></td><td>₹${money((r.mainFridgeQty + (r.secondFridgeQty * r.piecesPerBox)) * r.mrp)}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Healthy'}</span></td></tr>`).join('')}</tbody></table><p><button class="primary">Save stock balances</button></p></form>`;
+  const table = `<form method="post" action="/owner/inventory"><table><thead><tr><th>Item</th><th>Main Fridge</th><th>Second Fridge</th><th>Total value</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td><input name="main_${r.id}" type="number" min="0" value="${r.mainFridgeQty}"></td><td><input name="second_${r.id}" type="number" min="0" value="${r.secondFridgeQty}"></td><td>₹${money((r.mainFridgeQty + r.secondFridgeQty) * r.mrp)}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Healthy'}</span></td></tr>`).join('')}</tbody></table><p><button class="primary">Save stock balances</button></p></form>`;
   render(req, res, 'table-page', { title: 'Inventory Management', table });
 }));
 
@@ -331,9 +330,9 @@ app.post('/owner/inventory', requireRole('owner'), aw(async (req, res) => {
         const main = int(req.body[`main_${r.id}`]);
         const second = int(req.body[`second_${r.id}`]);
         if (main < 0 || second < 0) throw new Error('Stock cannot be negative');
-        const deltaPieces = (main - r.mainFridgeQty) + ((second - r.secondFridgeQty) * r.piecesPerBox);
+        const delta = (main - r.mainFridgeQty) + (second - r.secondFridgeQty);
         await c.inventory.updateOne({ itemId: r._id }, { $set: { mainFridgeQty: main, secondFridgeQty: second, updatedAt: new Date() } }, { session });
-        if (deltaPieces !== 0) await c.stockMovements.insertOne({ itemId: r._id, movementType: 'stock_adjustment', quantityPieces: deltaPieces, quantityBoxes: deltaPieces / r.piecesPerBox, sourceLocation: 'manual_adjustment', destinationLocation: 'inventory', notes: 'Owner bulk stock balance update', createdBy: objectId(req.user.id), createdAt: new Date() }, { session });
+        if (delta !== 0) await c.stockMovements.insertOne({ itemId: r._id, movementType: 'stock_adjustment', quantityPieces: delta, quantityBoxes: delta / r.piecesPerBox, sourceLocation: 'manual_adjustment', destinationLocation: 'inventory', notes: 'Owner bulk stock balance update', createdBy: objectId(req.user.id), createdAt: new Date() }, { session });
       }
     });
     redirectWith(res, '/owner/inventory', 'ok', 'Inventory balances saved');
@@ -409,13 +408,7 @@ app.get('/manager/stock', requireRole('manager'), aw(async (req, res) => {
 
 app.get('/manager/pos', requireRole('manager'), aw(async (req, res) => {
   const rows = await itemRows(true);
-  const productCards = rows.map(r => {
-    const display = stockDisplay(r);
-    const image = r.imageUrl ? `<img class="pos-product-img" src="${esc(r.imageUrl)}" alt="${esc(r.name)} image">` : '<span class="pos-product-img placeholder">🍦</span>';
-    return `<article class="pos-product-card ${r.mainFridgeQty <= r.lowStockThreshold ? 'low' : ''}" data-price="${Number(r.mrp || 0)}" data-item-name="${esc(r.name).toLowerCase()}" data-item-title="${esc(r.name)}" data-item-image="${esc(r.imageUrl || '')}"><div class="pos-product-main">${image}<div><h3>${esc(r.name)}</h3><p>₹${money(r.mrp)}</p></div></div><div class="pos-stock-line"><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'In stock'}</span><small>Main ${display.mainPieces} pcs · Second ${display.secondBoxes} boxes · ${r.piecesPerBox} pcs/box</small></div><div class="pos-product-actions"><div class="qty-controls compact"><button class="qty-btn" type="button" data-qty-step="-1">−</button><input class="sale-qty" name="qty_${r.id}" type="number" min="0" max="${r.mainFridgeQty}" value="0" inputmode="numeric" aria-label="${esc(r.name)} quantity"><button class="qty-btn add" type="button" data-qty-step="1">+ Add</button></div><label class="inline-check"><input class="free-toggle" type="checkbox" name="free_${r.id}" value="1"> Free</label><output class="line-total">₹0.00</output></div></article>`;
-  }).join('') || '<p class="empty">No active items are available.</p>';
-  const mobileItems = rows.slice(0, 5).map(r => `${r.imageUrl ? `<img src="${esc(r.imageUrl)}" alt="${esc(r.name)} image">` : '<span>🍦</span>'}<div><strong>${esc(r.name)}</strong><small>₹${money(r.mrp)}</small></div><b>₹ ${money(r.mrp)}</b>`).map(item => `<div class="mobile-kulfi-row">${item}</div>`).join('');
-  const body = `<form method="post" action="/manager/pos" class="cold-pos pos-billing" data-pos-form><section class="pos-mobile-preview"><div class="mobile-shell"><div class="mobile-title"><strong>Kulfi</strong><span>♨</span></div><label class="pos-search compact-search"><span>⌕</span><input type="search" placeholder="Search kulfi" data-pos-search></label><h3>Search kulfi</h3><div class="mobile-kulfi-list">${mobileItems}</div><div class="mobile-cart-bar"><span>🛒</span><span data-mobile-count>0 items<br><small>Total</small></span><strong data-mobile-total>₹0</strong></div></div></section><section class="pos-workspace card"><header class="pos-screen-head"><h2>Kulfi Cart</h2><div class="pos-head-icons"><span>ⓘ</span><span class="avatar-dot">👤</span></div></header><div class="bill-strip"><div class="draft-tabs" data-draft-tabs></div><button class="draft-more" type="button" data-new-draft aria-label="Open a new draft bill">⌄</button></div><section class="pos-shop-grid"><main class="pos-products"><label class="pos-search"><span>⌕</span><input type="search" placeholder="Search kulfi" data-pos-search></label><div class="pos-filters"><select aria-label="Category filter"><option>All categories</option></select><select aria-label="Stock filter"><option>In stock</option><option>All stock</option></select></div><div class="pos-product-grid" data-product-grid>${productCards}</div></main><aside class="pos-cart"><article class="pos-cart-box"><h3>Cart</h3><div class="cart-lines" data-cart-items><p class="empty">No items added.</p></div><div class="cart-total-row"><span>Total</span><strong>₹<span data-cart-total>0.00</span></strong></div></article><article class="pos-cart-box compact-fields"><label>Customer Name<input name="customerName" data-customer-name placeholder="Customer name (optional)"></label><label>Cash<input name="cashAmount" data-cash-amount type="number" min="0" step="0.01" value="0.00"></label><label class="sr-only">Online Amount<input name="onlineAmount" data-online-amount type="number" min="0" step="0.01" value="0.00"></label></article><article class="pos-cart-box compact-fields"><label>Total<input name="totalAmountPreview" data-total-amount type="number" min="0" step="0.01" value="0.00" readonly></label><label>Global Remarks<textarea name="remark" data-remark rows="2" placeholder="Remarks for this draft bill"></textarea></label></article><button class="primary save-bill">Save Bill</button></aside></section></section></form>`;
+  const body = `<form method="post" action="/manager/pos" class="pos-grid pos-billing" data-pos-form><section class="card"><div class="pos-list-head"><span>Item details</span><span>Main total pcs</span><span>Second boxes</span><span>Sale qty</span><span>Line amount</span><span>Transfer</span></div><div class="items-list">${rows.map(r => { const display = stockDisplay(r); return `<article class="item-row ${r.mainFridgeQty <= r.lowStockThreshold ? 'low' : ''}" data-price="${Number(r.mrp || 0)}"><div class="item-main"><h3>${esc(r.name)}</h3><p>MRP ₹${money(r.mrp)} · ${r.piecesPerBox} pcs/box</p><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Ready'}</span></div><div class="stock-pill">${display.mainPieces}</div><div class="stock-pill">${display.secondBoxes}</div><div class="qty-controls"><button class="qty-btn" type="button" data-qty-step="-1">−</button><input class="sale-qty" name="qty_${r.id}" type="number" min="0" max="${r.mainFridgeQty}" value="0" inputmode="numeric"><button class="qty-btn" type="button" data-qty-step="1">+</button><label class="inline-check"><input class="free-toggle" type="checkbox" name="free_${r.id}" value="1"> Free</label></div><output class="line-total">₹0.00</output><div class="transfer-controls"><input name="transfer_${r.id}" type="number" min="0" max="${r.secondFridgeQty}" placeholder="Boxes"><button formaction="/manager/transfer" name="itemId" value="${r.id}" class="btn secondary">Transfer</button></div></article>`; }).join('') || '<p class="empty">No active items are available.</p>'}</div></section><aside class="card payment-card"><h2>Payment</h2><label>Total Amount<input name="totalAmountPreview" data-total-amount type="number" min="0" step="0.01" value="0.00" readonly></label><div class="payment-actions"><button class="btn secondary" type="button" data-pay-mode="cash">Pay in Cash</button><button class="btn secondary" type="button" data-pay-mode="online">Pay Online</button></div><label>Cash Amount<input name="cashAmount" data-cash-amount type="number" min="0" step="0.01" value="0.00"></label><label>Online Amount<input name="onlineAmount" data-online-amount type="number" min="0" step="0.01" value="0.00"></label><label>Bill remark<textarea name="remark" rows="3"></textarea></label><button class="primary">Save bill</button></aside></form>`;
   render(req, res, 'table-page', { title: 'POS Billing', intro: body, table: '' });
 }));
 
@@ -429,7 +422,7 @@ app.post('/manager/transfer', requireRole('manager'), aw(async (req, res) => {
       const item = await c.items.findOne({ _id: itemId, active: true, hidden: false }, { session });
       if (!item) throw new Error('Item is inactive or not found');
       qty = boxes * Number(item.piecesPerBox || 1);
-      const updated = await c.inventory.updateOne({ itemId, secondFridgeQty: { $gte: boxes } }, { $inc: { secondFridgeQty: -boxes, mainFridgeQty: qty }, $set: { updatedAt: new Date() } }, { session });
+      const updated = await c.inventory.updateOne({ itemId, secondFridgeQty: { $gte: qty } }, { $inc: { secondFridgeQty: -qty, mainFridgeQty: qty }, $set: { updatedAt: new Date() } }, { session });
       if (!updated.modifiedCount) throw new Error('Second Fridge stock is insufficient');
       await c.stockMovements.insertOne({ itemId, movementType: 'transfer_second_to_main', quantityPieces: qty, quantityBoxes: boxes, sourceLocation: 'second_fridge', destinationLocation: 'main_fridge', notes: 'Manager POS transfer', createdBy: objectId(req.user.id), createdAt: new Date() }, { session });
     });
@@ -437,54 +430,7 @@ app.post('/manager/transfer', requireRole('manager'), aw(async (req, res) => {
   } catch (e) { redirectWith(res, '/manager/pos', 'err', e.message); }
 }));
 
-app.get('/manager/movement', requireRole('manager'), aw(async (req, res) => {
-  const rows = await itemRows(true);
-  const options = rows.map(r => `<option value="${r.id}">${esc(r.name)} · ${r.piecesPerBox} pcs/box · Main ${r.mainFridgeQty} pcs · Second ${r.secondFridgeQty} boxes</option>`).join('');
-  const intro = `<section class="movement-grid"><article class="card"><h2>Stock Transfer</h2><p class="muted">Move boxes from Second Fridge to Main Fridge. The system converts boxes into pieces for counter sales.</p><form method="post" action="/manager/movement/transfer" class="stack"><label>Item<select name="itemId" required>${options}</select></label><label>Boxes to move<input name="boxes" type="number" min="1" step="1" required></label><button class="primary">Transfer to Main Fridge</button></form></article><article class="card"><h2>Vendor Intake</h2><p class="muted">New vendor stock is routed directly into the Second Fridge box pool.</p><form method="post" action="/manager/movement/vendor-intake" class="stack"><label>Item<select name="itemId" required>${options}</select></label><label>Received boxes<input name="boxes" type="number" min="1" step="1" required></label><label>Notes<textarea name="notes" rows="2" placeholder="Vendor invoice or batch note"></textarea></label><button class="primary">Add to Second Fridge</button></form></article><article class="card"><h2>Vendor Returns</h2><p class="muted">Flag damaged stock and return boxes directly back to the vendor from Second Fridge.</p><form method="post" action="/manager/movement/vendor-return" class="stack"><label>Item<select name="itemId" required>${options}</select></label><label>Damaged boxes<input name="boxes" type="number" min="1" step="1" required></label><label>Damage notes<textarea name="notes" rows="2" required placeholder="Reason for vendor return"></textarea></label><button class="primary">Return to Vendor</button></form></article></section>`;
-  render(req, res, 'table-page', { title: 'Movement', intro, table: '' });
-}));
-
-async function moveBoxes(req, res, config) {
-  try {
-    const itemId = objectId(req.body.itemId);
-    const boxes = int(req.body.boxes);
-    if (boxes <= 0) throw new Error('Box count is required');
-    await withTransaction(async (c, session) => {
-      const item = await c.items.findOne({ _id: itemId, active: true, hidden: false }, { session });
-      if (!item) throw new Error('Item is inactive or not found');
-      const pieces = boxes * Number(item.piecesPerBox || 1);
-      const now = new Date();
-      const update = config.inventoryUpdate(boxes, pieces, now);
-      const updated = await c.inventory.updateOne(config.inventoryFilter(itemId, boxes), update, { session });
-      if (!updated.modifiedCount) throw new Error(config.insufficientMessage);
-      await c.stockMovements.insertOne({ itemId, movementType: config.type, quantityPieces: config.sign * pieces, quantityBoxes: config.sign * boxes, sourceLocation: config.source, destinationLocation: config.destination, notes: config.notes(req.body.notes), createdBy: objectId(req.user.id), createdAt: now }, { session });
-    });
-    redirectWith(res, '/manager/movement', 'ok', config.success);
-  } catch (e) { redirectWith(res, '/manager/movement', 'err', e.message); }
-}
-
-app.post('/manager/movement/transfer', requireRole('manager'), aw((req, res) => moveBoxes(req, res, {
-  type: 'transfer_second_to_main', sign: 1, source: 'second_fridge', destination: 'main_fridge', insufficientMessage: 'Second Fridge stock is insufficient', success: 'Stock transferred to Main Fridge',
-  inventoryFilter: (itemId, boxes) => ({ itemId, secondFridgeQty: { $gte: boxes } }),
-  inventoryUpdate: (boxes, pieces, now) => ({ $inc: { secondFridgeQty: -boxes, mainFridgeQty: pieces }, $set: { updatedAt: now } }),
-  notes: () => 'Manager movement transfer'
-})));
-
-app.post('/manager/movement/vendor-intake', requireRole('manager'), aw((req, res) => moveBoxes(req, res, {
-  type: 'vendor_stock_in', sign: 1, source: 'vendor', destination: 'second_fridge', insufficientMessage: 'Unable to add vendor intake', success: 'Vendor stock added to Second Fridge',
-  inventoryFilter: (itemId) => ({ itemId }),
-  inventoryUpdate: (boxes, pieces, now) => ({ $inc: { secondFridgeQty: boxes }, $set: { updatedAt: now } }),
-  notes: (notes) => notes || 'Vendor intake to Second Fridge'
-})));
-
-app.post('/manager/movement/vendor-return', requireRole('manager'), aw((req, res) => moveBoxes(req, res, {
-  type: 'vendor_return', sign: -1, source: 'second_fridge', destination: 'vendor', insufficientMessage: 'Second Fridge stock is insufficient for vendor return', success: 'Damaged stock returned to vendor',
-  inventoryFilter: (itemId, boxes) => ({ itemId, secondFridgeQty: { $gte: boxes } }),
-  inventoryUpdate: (boxes, pieces, now) => ({ $inc: { secondFridgeQty: -boxes }, $set: { updatedAt: now } }),
-  notes: (notes) => notes || 'Damaged stock vendor return'
-})));
-
-app.post('/manager/pos' , requireRole('manager'), aw(async (req, res) => {
+app.post('/manager/pos', requireRole('manager'), aw(async (req, res) => {
   try {
     await withTransaction(async (c, session) => {
       const rows = await itemRows(true);
@@ -503,7 +449,7 @@ app.post('/manager/pos' , requireRole('manager'), aw(async (req, res) => {
       const online = number(req.body.onlineAmount);
       if (Math.abs((cash + online) - total) > 0.009) throw new Error('Invalid payment amount: cash + online must equal bill total');
       const now = new Date();
-      const sale = await c.sales.insertOne({ billNumber: makeBillNumber(), managerId: objectId(req.user.id), totalAmount: total, cashAmount: cash, onlineAmount: online, remark: req.body.remark || '', customerName: req.body.customerName || '', type: 'sale', originalSaleId: null, createdAt: now, updatedAt: now }, { session });
+      const sale = await c.sales.insertOne({ billNumber: makeBillNumber(), managerId: objectId(req.user.id), totalAmount: total, cashAmount: cash, onlineAmount: online, remark: req.body.remark || '', type: 'sale', originalSaleId: null, createdAt: now, updatedAt: now }, { session });
       for (const l of lines) {
         const updated = await c.inventory.updateOne({ itemId: l.item._id, mainFridgeQty: { $gte: l.qty } }, { $inc: { mainFridgeQty: -l.qty }, $set: { updatedAt: now } }, { session });
         if (!updated.modifiedCount) throw new Error(`Insufficient Main Fridge stock for ${l.item.name}`);
