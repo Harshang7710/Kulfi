@@ -155,10 +155,10 @@ async function seedIfEmpty() {
     await c.stockMovements.insertOne({
       itemId: itemResult.insertedId,
       movementType: 'vendor_stock_in',
-      quantityPieces: mainFridgeQty + secondFridgeQty,
-      quantityBoxes: (mainFridgeQty + secondFridgeQty) / piecesPerBox,
+      quantityPieces: mainFridgeQty + (secondFridgeQty * piecesPerBox),
+      quantityBoxes: secondFridgeQty,
       sourceLocation: 'vendor',
-      destinationLocation: 'both_fridges',
+      destinationLocation: 'main_and_second_fridges',
       notes: 'Opening seed stock',
       createdBy: ownerResult.insertedId,
       createdAt: now
@@ -173,6 +173,7 @@ async function seedIfEmpty() {
     cashAmount: 60,
     onlineAmount: 60,
     remark: 'Seed sale',
+    customerName: 'Walk-in seed customer',
     type: 'sale',
     originalSaleId: null,
     createdAt: now,
