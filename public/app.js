@@ -192,6 +192,13 @@
     };
     form.querySelector('[data-product-search]')?.addEventListener('input', applyProductFilters);
     form.querySelector('[data-stock-filter]')?.addEventListener('change', applyProductFilters);
+    form.querySelector('[data-product-reset]')?.addEventListener('click', () => {
+      const search = form.querySelector('[data-product-search]');
+      const stock = form.querySelector('[data-stock-filter]');
+      if (search) search.value = '';
+      if (stock) stock.value = 'all';
+      applyProductFilters();
+    });
 
     form.addEventListener('submit', (event) => {
       const action = event.submitter?.getAttribute('formaction') || form.getAttribute('action') || '';
