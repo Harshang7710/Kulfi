@@ -140,16 +140,10 @@
         lastEdited = 'online';
         setPayment(0, total());
       }
-      if (event.target.closest('[data-draft-save]')) saveDraft();
-      if (event.target.closest('[data-draft-new]')) {
-        saveDraft();
-        activeDraftId = `draft-${Date.now()}`;
-        clearBill();
-        renderDraftSelect();
-      }
       if (event.target.closest('[data-draft-delete]')) {
+        const activeSlot = form.querySelector('[data-draft-slot].active')?.dataset.draftSlot || '1';
+        activeDraftId = `draft-slot-${activeSlot}`;
         writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
-        activeDraftId = '';
         clearBill();
         renderDraftSelect();
       }
@@ -200,17 +194,12 @@
       applyProductFilters();
     });
 
-    form.addEventListener('submit', (event) => {
-      const action = event.submitter?.getAttribute('formaction') || form.getAttribute('action') || '';
-      if (action.includes('/manager/transfer')) {
-        saveDraft();
-        return;
-      }
+    form.addEventListener('submit', () => {
       writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
     });
 
-    activeDraftId = readDrafts()[0]?.id || `draft-${Date.now()}`;
-    if (readDrafts().length) loadDraft(activeDraftId);
+    activeDraftId = 'draft-slot-1';
+    if (readDrafts().some((draft) => draft.id === activeDraftId)) loadDraft(activeDraftId);
     else renderDraftSelect();
     recalc();
   }
