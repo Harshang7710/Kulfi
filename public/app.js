@@ -10,10 +10,6 @@
     const cashInput = form.querySelector('[data-cash-amount]');
     const onlineInput = form.querySelector('[data-online-amount]');
     const draftSelect = form.querySelector('[data-draft-select]');
-    const cartPreview = form.querySelector('[data-cart-preview]');
-    const cartTotal = form.querySelector('[data-cart-total]');
-    const mobileCartCount = form.querySelector('[data-mobile-cart-count]');
-    const mobileCartTotal = form.querySelector('[data-mobile-cart-total]');
     let lastEdited = 'cash';
     let activeDraftId = '';
 
@@ -28,25 +24,6 @@
       try { return JSON.parse(localStorage.getItem(draftKey) || '[]'); } catch { return []; }
     };
     const writeDrafts = (drafts) => localStorage.setItem(draftKey, JSON.stringify(drafts));
-
-    const selectedLines = () => Array.from(form.querySelectorAll('.item-row')).map((row) => {
-      const qty = Number(row.querySelector('.sale-qty')?.value || 0);
-      const price = Number(row.dataset.price || 0);
-      const free = row.querySelector('.free-toggle')?.checked;
-      const name = row.querySelector('h3')?.textContent?.trim() || 'Item';
-      const image = row.querySelector('.product-media img')?.getAttribute('src') || '';
-      const lineTotal = free ? 0 : qty * price;
-      return { row, qty, price, free, name, image, lineTotal };
-    }).filter((line) => line.qty > 0);
-
-    const renderCartPreview = (lines, billTotal) => {
-      if (cartPreview) {
-        cartPreview.innerHTML = lines.length ? lines.map((line) => `<div class="cart-line">${line.image ? `<img src="${line.image}" alt="">` : '<span class="cart-emoji">🍦</span>'}<span>${line.name}<small>${line.qty} ${line.free ? 'free' : `× ₹${money(line.price)}`}</small></span><strong>₹${money(line.lineTotal)}</strong></div>`).join('') : '<p class="empty">No items added yet.</p>';
-      }
-      if (cartTotal) cartTotal.textContent = `₹${money(billTotal)}`;
-      if (mobileCartCount) mobileCartCount.textContent = `${lines.reduce((a, line) => a + line.qty, 0)} items`;
-      if (mobileCartTotal) mobileCartTotal.textContent = `₹${money(billTotal)}`;
-    };
 
     const recalc = () => {
       let billTotal = 0;
@@ -83,7 +60,6 @@
 
     const renderDraftSelect = () => {
       const drafts = readDrafts();
-      if (!draftSelect) return;
       draftSelect.innerHTML = drafts.map((draft) => `<option value="${draft.id}">${draft.name} · ${new Date(draft.updatedAt).toLocaleTimeString()}</option>`).join('');
       draftSelect.value = activeDraftId;
     };
@@ -143,22 +119,18 @@
         lastEdited = 'online';
         setPayment(0, total());
       }
-      if (event.target.closest('[data-draft-delete]')) {
-        const activeSlot = form.querySelector('[data-draft-slot].active')?.dataset.draftSlot || '1';
-        activeDraftId = `draft-slot-${activeSlot}`;
-        writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
+      if (event.target.closest('[data-draft-save]')) saveDraft();
+      if (event.target.closest('[data-draft-new]')) {
+        saveDraft();
+        activeDraftId = `draft-${Date.now()}`;
         clearBill();
         renderDraftSelect();
       }
-      const slot = event.target.closest('[data-draft-slot]');
-      if (slot) {
-        saveDraft();
-        const slotId = `draft-slot-${slot.dataset.draftSlot}`;
-        const existing = readDrafts().find((draft) => draft.id === slotId);
-        form.querySelectorAll('[data-draft-slot]').forEach((button) => button.classList.toggle('active', button === slot));
-        activeDraftId = slotId;
-        if (existing) loadDraft(slotId);
-        else clearBill();
+      if (event.target.closest('[data-draft-delete]')) {
+        writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
+        activeDraftId = '';
+        clearBill();
+        renderDraftSelect();
       }
     });
 
@@ -177,32 +149,17 @@
       if (event.target.matches('.free-toggle')) recalc();
       if (event.target.matches('[data-draft-select]')) loadDraft(event.target.value);
     });
-
-    const applyProductFilters = () => {
-      const query = (form.querySelector('[data-product-search]')?.value || '').trim().toLowerCase();
-      const stock = form.querySelector('[data-stock-filter]')?.value || 'all';
-      form.querySelectorAll('.item-row').forEach((row) => {
-        const matchesSearch = !query || (row.dataset.productName || '').includes(query);
-        const matchesStock = stock === 'all' || row.dataset.stockStatus === stock;
-        row.hidden = !(matchesSearch && matchesStock);
-      });
-    };
-    form.querySelector('[data-product-search]')?.addEventListener('input', applyProductFilters);
-    form.querySelector('[data-stock-filter]')?.addEventListener('change', applyProductFilters);
-    form.querySelector('[data-product-reset]')?.addEventListener('click', () => {
-      const search = form.querySelector('[data-product-search]');
-      const stock = form.querySelector('[data-stock-filter]');
-      if (search) search.value = '';
-      if (stock) stock.value = 'all';
-      applyProductFilters();
-    });
-
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+      const action = event.submitter?.getAttribute('formaction') || form.getAttribute('action') || '';
+      if (action.includes('/manager/transfer')) {
+        saveDraft();
+        return;
+      }
       writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
     });
 
-    activeDraftId = 'draft-slot-1';
-    if (readDrafts().some((draft) => draft.id === activeDraftId)) loadDraft(activeDraftId);
+    activeDraftId = readDrafts()[0]?.id || `draft-${Date.now()}`;
+    if (readDrafts().length) loadDraft(activeDraftId);
     else renderDraftSelect();
     recalc();
   }
