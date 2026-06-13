@@ -27,21 +27,15 @@
 
     const recalc = () => {
       let billTotal = 0;
-      const lines = selectedLines();
       form.querySelectorAll('.item-row').forEach((row) => {
         const qty = Number(row.querySelector('.sale-qty')?.value || 0);
         const price = Number(row.dataset.price || 0);
         const free = row.querySelector('.free-toggle')?.checked;
         const lineTotal = free ? 0 : qty * price;
-        row.classList.toggle('selected', qty > 0);
-        const display = row.querySelector('[data-qty-display]');
-        if (display) display.textContent = String(qty);
-        const line = row.querySelector('.line-total');
-        if (line) line.textContent = `₹${money(lineTotal)}`;
+        row.querySelector('.line-total').textContent = `₹${money(lineTotal)}`;
         billTotal += lineTotal;
       });
       totalInput.value = money(billTotal);
-      renderCartPreview(lines, billTotal);
       if (lastEdited === 'online') balanceFromOnline();
       else balanceFromCash();
     };
@@ -102,8 +96,7 @@
     form.addEventListener('click', (event) => {
       const stepper = event.target.closest('[data-qty-step]');
       if (stepper) {
-        const input = stepper.closest('.item-row')?.querySelector('.sale-qty');
-        if (!input) return;
+        const input = stepper.parentElement.querySelector('.sale-qty');
         const next = Number(input.value || 0) + Number(stepper.dataset.qtyStep || 0);
         const min = Number(input.min || 0);
         const max = Number(input.max || next);
