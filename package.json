@@ -12,7 +12,6 @@
     "check:reported-conflicts": "node scripts/check-conflicts.js README.md src/db.js src/server.js"
   },
   "dependencies": {
-    "@vercel/speed-insights": "^2.0.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "csv-stringify": "^6.5.2",
