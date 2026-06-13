@@ -75,3 +75,31 @@ th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#9a3412;ba
 /* POS cleanup: hide page chrome for billing, place counter beside price, keep draft dock in normal flow. */
 .route-manager-pos .top{display:none}.route-manager-pos .content{padding-top:16px}.route-manager-pos .zepto-pos{padding-bottom:24px}.route-manager-pos .zepto-pos .add-btn{position:static;min-width:64px;height:34px}.route-manager-pos .zepto-pos .price-line{display:flex;align-items:center;justify-content:space-between;gap:10px}.route-manager-pos .zepto-pos .price-action{display:flex;align-items:center;justify-content:flex-end;min-width:104px}.route-manager-pos .zepto-counter{position:static;grid-template-columns:32px 32px 32px;height:34px}.route-manager-pos .zepto-counter button,.route-manager-pos .zepto-counter span{height:34px}.route-manager-pos .draft-dock{position:static;left:auto;bottom:auto;transform:none;width:min(860px,100%);margin:18px auto 0;padding:8px 10px}.route-manager-pos .draft-dock .bill-tab,.route-manager-pos .draft-clear{height:42px;min-width:74px}.route-manager-pos .draft-clear{margin-left:auto}
 @media(max-width:640px){.route-manager-pos .draft-dock{position:static;width:100%;margin-top:14px}.route-manager-pos .zepto-pos{padding-bottom:86px}.route-manager-pos .zepto-pos .price-line{align-items:flex-start;flex-direction:column}.route-manager-pos .zepto-pos .price-action{min-width:0}}
+
+/* POS alignment and payment-selection refinements. */
+.route-manager-pos .zepto-pos .pos-storefront{grid-template-columns:minmax(280px,1fr) minmax(220px,320px) 96px;align-items:end;gap:12px}
+.route-manager-pos .zepto-pos .filter-panel{display:contents}
+.route-manager-pos .zepto-pos .filter-panel label{display:grid;gap:4px;margin:0}
+.route-manager-pos .zepto-pos .filter-panel select,.route-manager-pos .zepto-pos .filter-panel button{height:50px;width:100%;margin:0}
+.route-manager-pos .zepto-pos .product-info{display:grid;gap:6px}
+.route-manager-pos .zepto-pos .price-line{display:grid;grid-template-columns:auto minmax(76px,1fr);align-items:center;gap:8px;margin-bottom:0}
+.route-manager-pos .zepto-pos .price-action{display:flex;justify-content:flex-end;align-items:center;min-width:0;width:100%}
+.route-manager-pos .zepto-pos .add-btn{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;line-height:1;padding:0 14px}
+.route-manager-pos .zepto-counter{grid-template-columns:32px minmax(34px,1fr) 32px;width:min(116px,100%)}
+.route-manager-pos .zepto-counter button,.route-manager-pos .zepto-counter span{display:flex;align-items:center;justify-content:center;line-height:1;text-align:center;padding:0}
+.route-manager-pos .payment-methods{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.route-manager-pos .payment-methods span{grid-column:1/-1;color:#9a3412;font-weight:800}
+.route-manager-pos .payment-methods em{color:#e11d48;font-style:normal}
+.route-manager-pos .payment-methods .btn.active{background:linear-gradient(135deg,#fb923c,#fb7185);border-color:#fb7185;color:#fff;box-shadow:0 10px 22px rgba(225,29,72,.18)}
+.route-manager-pos .draft-dock{display:block;max-width:860px;cursor:default}
+.route-manager-pos .draft-dock summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}
+.route-manager-pos .draft-dock summary::-webkit-details-marker{display:none}
+.route-manager-pos .draft-dock summary::after{content:'▾';margin-left:auto;color:#9a3412;font-weight:900;transition:transform .18s ease}
+.route-manager-pos .draft-dock[open] summary::after{transform:rotate(180deg)}
+.route-manager-pos .draft-hint{color:#64748b;font-size:13px}
+.route-manager-pos .draft-panel{display:flex;align-items:center;gap:10px;margin-top:10px;overflow:auto}
+.route-manager-pos .draft-panel .draft-clear{margin-left:auto;flex:0 0 auto}
+.route-manager-pos .mobile-cart-bar{display:none!important}
+@media(max-width:1180px){.route-manager-pos .zepto-pos .pos-storefront{grid-template-columns:1fr minmax(220px,320px) 96px}}
+@media(max-width:720px){.route-manager-pos .zepto-pos .pos-storefront{grid-template-columns:1fr}.route-manager-pos .zepto-pos .filter-panel{display:grid;grid-template-columns:1fr 96px}.route-manager-pos .draft-panel{flex-wrap:wrap}.route-manager-pos .draft-panel .draft-clear{margin-left:0}.route-manager-pos .draft-hint{display:none}}
+@media(max-width:640px){.route-manager-pos .zepto-pos .price-line{grid-template-columns:1fr}.route-manager-pos .zepto-pos .price-action{justify-content:flex-start}.route-manager-pos .zepto-counter{width:116px}}
