@@ -20,12 +20,24 @@ export async function loginAction(formData: FormData) {
     redirect(`/login?err=${encodeURIComponent('Invalid user ID/email or password')}`);
   }
 
-  const user = await login(parsed.data.identifier, parsed.data.password);
+  let user;
+  try {
+    user = await login(parsed.data.identifier, parsed.data.password);
+  } catch (error) {
+    console.error('[login] Authentication lookup failed', error);
+    redirect(`/login?err=${encodeURIComponent('Login service is temporarily unavailable. Please try again shortly.')}`);
+  }
+
   if (!user) {
     redirect(`/login?err=${encodeURIComponent('Invalid user ID/email or password')}`);
   }
 
-  await setSessionCookie(sessionPayloadFor(user));
+  try {
+    await setSessionCookie(sessionPayloadFor(user));
+  } catch (error) {
+    console.error('[login] Session creation failed', error);
+    redirect(`/login?err=${encodeURIComponent('Login configuration is incomplete. Please contact the administrator.')}`);
+  }
 
   if (user.mustChangePassword) redirect('/password-setup');
   redirect(user.role === 'owner' ? '/owner' : '/manager');
