@@ -12,9 +12,8 @@
     const draftSelect = form.querySelector('[data-draft-select]');
     const cartPreview = form.querySelector('[data-cart-preview]');
     const cartTotal = form.querySelector('[data-cart-total]');
-    const mobileCartCount = form.querySelector('[data-mobile-cart-count]');
-    const mobileCartTotal = form.querySelector('[data-mobile-cart-total]');
-    let lastEdited = 'cash';
+    const paymentMethodInput = form.querySelector('[data-payment-method]');
+    let lastEdited = '';
     let activeDraftId = '';
 
     const total = () => Number(totalInput.value || 0);
@@ -22,8 +21,12 @@
       cashInput.value = money(Math.max(0, cash));
       onlineInput.value = money(Math.max(0, online));
     };
-    const balanceFromCash = () => setPayment(Number(cashInput.value || 0), total() - Number(cashInput.value || 0));
-    const balanceFromOnline = () => setPayment(total() - Number(onlineInput.value || 0), Number(onlineInput.value || 0));
+    const markPaymentMode = (mode) => {
+      if (paymentMethodInput) paymentMethodInput.value = mode || '';
+      form.querySelectorAll('[data-pay-mode]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.payMode === mode);
+      });
+    };
     const readDrafts = () => {
       try { return JSON.parse(localStorage.getItem(draftKey) || '[]'); } catch { return []; }
     };
@@ -44,8 +47,6 @@
         cartPreview.innerHTML = lines.length ? lines.map((line) => `<div class="cart-line">${line.image ? `<img src="${line.image}" alt="">` : '<span class="cart-emoji">🍦</span>'}<span>${line.name}<small>${line.qty} ${line.free ? 'free' : `× ₹${money(line.price)}`}</small></span><strong>₹${money(line.lineTotal)}</strong></div>`).join('') : '<p class="empty">No items added yet.</p>';
       }
       if (cartTotal) cartTotal.textContent = `₹${money(billTotal)}`;
-      if (mobileCartCount) mobileCartCount.textContent = `${lines.reduce((a, line) => a + line.qty, 0)} items`;
-      if (mobileCartTotal) mobileCartTotal.textContent = `₹${money(billTotal)}`;
     };
 
     const recalc = () => {
@@ -65,13 +66,11 @@
       });
       totalInput.value = money(billTotal);
       renderCartPreview(lines, billTotal);
-      if (lastEdited === 'online') balanceFromOnline();
-      else balanceFromCash();
     };
 
     const captureDraft = () => ({
       id: activeDraftId || `draft-${Date.now()}`,
-      name: form.customerName?.value?.trim() || `Draft ${readDrafts().length + 1}`,
+      name: `Draft ${readDrafts().length + 1}`,
       updatedAt: new Date().toISOString(),
       lastEdited,
       fields: Array.from(form.elements).reduce((acc, el) => {
@@ -103,7 +102,8 @@
         if (el.type === 'checkbox') el.checked = false;
         else if (!el.readOnly) el.value = el.matches('[data-cash-amount],[data-online-amount],.sale-qty') ? '0' : '';
       });
-      lastEdited = 'cash';
+      lastEdited = '';
+      markPaymentMode('');
       recalc();
     };
 
@@ -119,6 +119,7 @@
         if (el.type === 'checkbox') el.checked = Boolean(value);
         else el.value = value;
       });
+      markPaymentMode(paymentMethodInput?.value || lastEdited || '');
       recalc();
       renderDraftSelect();
     };
@@ -137,11 +138,13 @@
       const mode = event.target.closest('[data-pay-mode]')?.dataset.payMode;
       if (mode === 'cash') {
         lastEdited = 'cash';
-        setPayment(total(), 0);
+        markPaymentMode('cash');
+        cashInput.focus();
       }
       if (mode === 'online') {
         lastEdited = 'online';
-        setPayment(0, total());
+        markPaymentMode('online');
+        onlineInput.focus();
       }
       if (event.target.closest('[data-draft-delete]')) {
         const activeSlot = form.querySelector('[data-draft-slot].active')?.dataset.draftSlot || '1';
@@ -166,15 +169,16 @@
       if (event.target.matches('.sale-qty')) recalc();
       if (event.target.matches('[data-cash-amount]')) {
         lastEdited = 'cash';
-        balanceFromCash();
+        markPaymentMode('cash');
       }
       if (event.target.matches('[data-online-amount]')) {
         lastEdited = 'online';
-        balanceFromOnline();
+        markPaymentMode('online');
       }
     });
     form.addEventListener('change', (event) => {
       if (event.target.matches('.free-toggle')) recalc();
+      if (event.target.matches('[data-payment-method]')) markPaymentMode(event.target.value);
       if (event.target.matches('[data-draft-select]')) loadDraft(event.target.value);
     });
 
@@ -187,8 +191,9 @@
         row.hidden = !(matchesSearch && matchesStock);
       });
     };
-    form.querySelector('[data-product-search]')?.addEventListener('input', applyProductFilters);
-    form.querySelector('[data-stock-filter]')?.addEventListener('change', applyProductFilters);
+    form.addEventListener('input', (event) => { if (event.target.matches('[data-product-search]')) applyProductFilters(); });
+    form.addEventListener('change', (event) => { if (event.target.matches('[data-stock-filter]')) applyProductFilters(); });
+    form.querySelector('[data-product-search-button]')?.addEventListener('click', applyProductFilters);
     form.querySelector('[data-product-reset]')?.addEventListener('click', () => {
       const search = form.querySelector('[data-product-search]');
       const stock = form.querySelector('[data-stock-filter]');
@@ -197,14 +202,21 @@
       applyProductFilters();
     });
 
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+      if (!paymentMethodInput?.value) {
+        event.preventDefault();
+        alert('Please select Cash or Online before saving the bill.');
+        return;
+      }
       writeDrafts(readDrafts().filter((draft) => draft.id !== activeDraftId));
     });
 
     activeDraftId = 'draft-slot-1';
     if (readDrafts().some((draft) => draft.id === activeDraftId)) loadDraft(activeDraftId);
     else renderDraftSelect();
+    markPaymentMode(paymentMethodInput?.value || '');
     recalc();
+    applyProductFilters();
   }
 
   function initImageUploads() {
