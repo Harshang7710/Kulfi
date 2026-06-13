@@ -57,7 +57,10 @@
         const free = row.querySelector('.free-toggle')?.checked;
         const lineTotal = free ? 0 : qty * price;
         row.classList.toggle('selected', qty > 0);
-        row.querySelector('.line-total').textContent = `₹${money(lineTotal)}`;
+        const display = row.querySelector('[data-qty-display]');
+        if (display) display.textContent = String(qty);
+        const line = row.querySelector('.line-total');
+        if (line) line.textContent = `₹${money(lineTotal)}`;
         billTotal += lineTotal;
       });
       totalInput.value = money(billTotal);
