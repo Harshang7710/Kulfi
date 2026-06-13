@@ -1,0 +1,9 @@
+<% if (user) { %>
+<section class="card error-page">
+<p class="error-code"><%= status %></p>
+<p><%= message %></p>
+<p><a class="btn primary" href="<%= user.role==='owner' ? '/owner' : '/manager' %>">Back to dashboard</a></p>
+</section>
+<% } else { %>
+<div class="login-page"><section class="card error-page"><img class="login-logo" src="/logo.svg" alt="Desi Mastaani Matka Kulfi logo"><h1><%= title %></h1><p class="error-code"><%= status %></p><p><%= message %></p><p><a class="btn primary" href="/login">Back to login</a></p></section></div>
+<% } %>

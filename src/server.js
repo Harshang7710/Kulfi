@@ -8,17 +8,30 @@ const { stringify } = require('csv-stringify/sync');
 const { z } = require('zod');
 const { connect, collections, seedIfEmpty, todayBounds, money, makeBillNumber, objectId, withTransaction, databaseConfigSummary } = require('./db');
 const { attachUser, requireRole, login, setSessionCookie, clearSessionCookie } = require('./auth');
+const { validateEnv, csrfProtection, authLimiter } = require('./security');
 
 const app = express();
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:'],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  }
+}));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get(['/favicon.ico', '/favicon.png'], (req, res) => res.redirect(302, '/logo.svg'));
+app.use(csrfProtection);
 
 const PORT = process.env.PORT || 3000;
 const aw = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
@@ -26,7 +39,9 @@ let startupPromise;
 
 async function ensureRuntimeReady() {
   if (!startupPromise) {
-    startupPromise = connect()
+    startupPromise = Promise.resolve()
+      .then(() => validateEnv())
+      .then(() => connect())
       .then(() => seedIfEmpty())
       .catch((error) => {
         startupPromise = null;
@@ -37,7 +52,6 @@ async function ensureRuntimeReady() {
 }
 const notice = (req) => req.query.ok ? { type: 'success', message: req.query.ok } : req.query.err ? { type: 'error', message: req.query.err } : null;
 const redirectWith = (res, path, key, msg) => res.redirect(`${path}?${key}=${encodeURIComponent(msg)}`);
-const esc = (s = '') => String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 const number = (v) => Number(v || 0);
 const int = (v) => Math.trunc(Number(v || 0));
 const bool = (v) => v === true || v === '1' || v === 'on';
@@ -45,7 +59,8 @@ const optionalNumber = (v, fallback = 0) => String(v ?? '').trim() === '' ? fall
 const stockDisplay = (row) => ({ secondBoxes: Number(row.secondFridgeQty || 0), mainPieces: Number(row.mainFridgeQty || 0), secondPieces: Number(row.secondFridgeQty || 0) * Number(row.piecesPerBox || 0) });
 
 function render(req, res, view, data = {}) {
-  const baseData = { ...data, user: req.user, path: req.path, notice: notice(req), money };
+  const baseData = { ...data, user: req.user, path: req.path, notice: notice(req), money, isProduction: process.env.NODE_ENV === 'production' };
+  if (data.status) res.status(data.status);
   res.render(view, baseData, (viewError, body) => {
     if (viewError) {
       console.error(viewError);
@@ -184,7 +199,7 @@ app.use(aw(attachUser));
 
 app.get('/', (req, res) => res.redirect(req.user ? (req.user.role === 'owner' ? '/owner' : '/manager') : '/login'));
 app.get('/login', (req, res) => req.user ? res.redirect(req.user.role === 'owner' ? '/owner' : '/manager') : render(req, res, 'login', { title: 'Login', error: req.query.err, next: req.query.next }));
-app.post('/login', aw(async (req, res) => {
+app.post('/login', authLimiter, aw(async (req, res) => {
   const user = await login(req.body.identifier || req.body.email, req.body.password);
   if (!user) return res.redirect('/login?err=Invalid%20user%20ID/email%20or%20password');
   setSessionCookie(res, user);
@@ -254,6 +269,8 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
     const amountRows = await c.sales.find({ createdAt: { $gte: d, $lte: end } }).toArray();
     trend.push({ day: d.toISOString().slice(0, 10), amount: amountRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0) });
   }
+  const trendMax = Math.max(...trend.map(t => t.amount), 1);
+  trend.forEach(t => { t.heightPct = Math.min(100, Math.max(5, Math.round((t.amount / trendMax) * 100 / 5) * 5)); });
   const itemById = new Map(inventory.map(i => [String(i._id), i]));
   const topItems = Object.values(saleItems.reduce((acc, si) => {
     const key = String(si.itemId);
@@ -275,9 +292,7 @@ app.get('/owner', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/items', requireRole('owner'), aw(async (req, res) => {
   const rows = await itemRows(false);
-  const form = `<form method="post" action="/owner/items" class="form-grid" data-image-upload-form><label>Numeric Item ID<input name="itemCode" type="number" min="1" step="1" required></label><label>Name<input name="name" required></label><label>MRP<input name="mrp" type="number" min="0.01" step="0.01" required></label><label>Profit %<input name="profitPercentage" type="number" min="0" step="0.01" placeholder="Blank until known"></label><label>Pieces/box<input name="piecesPerBox" type="number" min="1" step="1" placeholder="Blank"></label><label>Low threshold<input name="lowStockThreshold" type="number" min="0" step="1" placeholder="Blank"></label><label>Product image (optional)<input name="imageUpload" type="file" accept="image/*" data-image-upload><input name="imageData" type="hidden" data-image-data><small class="muted">Lightweight upload: saved as a small browser-compressed image.</small></label><button class="primary">Add item</button></form>`;
-  const table = `<form method="post" action="/owner/items/update"><table><thead><tr><th>Image</th><th>ID</th><th>Name</th><th>MRP</th><th>Profit %</th><th>Pieces/box</th><th>Low</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.imageData ? `<img class="item-thumb" src="${esc(r.imageData)}" alt="${esc(r.name)} image">` : '—'}</td><td><input name="itemCode_${r.id}" type="number" min="1" step="1" value="${esc(r.itemCode)}" required></td><td><input name="name_${r.id}" value="${esc(r.name)}" required></td><td><input name="mrp_${r.id}" type="number" min="0.01" step="0.01" value="${money(r.mrp)}" required></td><td><input name="profitPercentage_${r.id}" type="number" min="0" step="0.01" value="${r.profitPercentage ?? ''}"></td><td><input name="piecesPerBox_${r.id}" type="number" min="1" step="1" value="${r.piecesPerBox ?? ''}"></td><td><input name="lowStockThreshold_${r.id}" type="number" min="0" step="1" value="${r.lowStockThreshold ?? ''}"></td><td><label class="inline-check"><input type="checkbox" name="active_${r.id}" ${r.active ? 'checked' : ''}> Active</label><label class="inline-check"><input type="checkbox" name="hidden_${r.id}" ${r.hidden ? 'checked' : ''}> Hidden</label></td></tr>`).join('') || '<tr><td colspan="8" class="empty">No items yet.</td></tr>'}</tbody></table><p class="actions"><button class="primary">Save catalog changes</button></p></form>`;
-  render(req, res, 'table-page', { title: 'Item Catalog', form, table });
+  render(req, res, 'owner-items', { title: 'Item Catalog', rows });
 }));
 
 app.post('/owner/items', requireRole('owner'), aw(async (req, res) => {
@@ -319,8 +334,7 @@ app.post('/owner/items/update', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/inventory', requireRole('owner'), aw(async (req, res) => {
   const rows = await itemRows(false);
-  const table = `<form method="post" action="/owner/inventory"><table><thead><tr><th>Item</th><th>Main Fridge (pcs)</th><th>Second Fridge (boxes)</th><th>Total value</th><th>Status</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td><input name="main_${r.id}" type="number" min="0" value="${r.mainFridgeQty}"></td><td><input name="second_${r.id}" type="number" min="0" value="${r.secondFridgeQty}"></td><td>₹${money((r.mainFridgeQty + (r.secondFridgeQty * r.piecesPerBox)) * r.mrp)}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Healthy'}</span></td></tr>`).join('')}</tbody></table><p><button class="primary">Save stock balances</button></p></form>`;
-  render(req, res, 'table-page', { title: 'Inventory Management', table });
+  render(req, res, 'owner-inventory', { title: 'Inventory Management', rows });
 }));
 
 app.post('/owner/inventory', requireRole('owner'), aw(async (req, res) => {
@@ -351,10 +365,8 @@ app.get('/owner/movements', requireRole('owner'), aw(async (req, res) => {
     { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } }, { $unwind: '$item' },
     { $lookup: { from: 'users', localField: 'createdBy', foreignField: '_id', as: 'creator' } }, { $unwind: '$creator' }
   ]).toArray();
-  const itemOptions = items.map(i => `<option value="${i.id}">${esc(i.name)} (${i.piecesPerBox} pcs/box)</option>`).join('');
-  const intro = `<section class="grid two"><article class="card"><h2>Movement</h2><p class="muted">Move stock between fridges, receive vendor stock into the Second Fridge, or return damaged stock back to the vendor.</p><form method="post" action="/owner/movements" class="form-grid two-col"><label>Workflow<select name="movementAction"><option value="transfer_second_to_main">Second Fridge → Main Fridge</option><option value="vendor_stock_in">Vendor intake → Second Fridge</option><option value="vendor_return">Damaged stock → Vendor return</option></select></label><label>Item<select name="itemId" required>${itemOptions}</select></label><label>Quantity (boxes)<input name="boxes" type="number" min="1" step="1" required></label><label>Notes<input name="notes" placeholder="Invoice, reason, or damage details"></label><button class="primary">Record movement</button></form></article><article class="card"><h2>Unit logic</h2><ul class="feed"><li><span>Main Fridge</span><span>Tracked as individual pieces for retail sales.</span></li><li><span>Second Fridge</span><span>Tracked as boxes for vendor/wholesale stock.</span></li><li><span>Transfers</span><span>Entered in boxes and converted to pieces automatically.</span></li></ul></article></section>`;
-  const table = `<table><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Pieces</th><th>Boxes</th><th>Source</th><th>Destination</th><th>Created by</th><th>Notes</th></tr></thead><tbody>${rows.map(r => `<tr><td>${new Date(r.createdAt).toLocaleString()}</td><td>${esc(r.item.name)}</td><td>${r.movementType.replaceAll('_', ' ')}</td><td>${r.quantityPieces}</td><td>${money(r.quantityBoxes)}</td><td>${esc(r.sourceLocation || '')}</td><td>${esc(r.destinationLocation || '')}</td><td>${esc(r.creator.name)}</td><td>${esc(r.notes || '')}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">No stock movement records found.</td></tr>'}</tbody></table>`;
-  render(req, res, 'table-page', { title: 'Movement', intro, table });
+  const movementTypes = ['stock_adjustment', 'transfer_second_to_main', 'vendor_stock_in', 'vendor_return', 'pos_sale', 'return_movement'];
+  render(req, res, 'owner-movements', { title: 'Movement', items, rows, movementTypes, query: req.query });
 }));
 
 app.post('/owner/movements', requireRole('owner'), aw(async (req, res) => {
@@ -387,9 +399,7 @@ app.post('/owner/movements', requireRole('owner'), aw(async (req, res) => {
 app.get('/owner/reports', requireRole('owner'), aw(async (req, res) => {
   const range = dateRange(req.query);
   const report = await reports(range);
-  const intro = `<form class="form-grid" method="get"><label>From<input type="date" name="from" value="${range.fromDate}"></label><label>To<input type="date" name="to" value="${range.toDate}"></label><button class="primary">Filter</button><a class="btn secondary" href="/owner/reports.csv?from=${range.fromDate}&to=${range.toDate}">Export CSV</a></form><section class="grid stats"><article class="card stat"><span>Gross sales</span><span class="stat-value">₹${money(report.totals.gross)}</span></article><article class="card stat"><span>Returns</span><span class="stat-value">₹${money(report.totals.returns)}</span></article><article class="card stat"><span>Net sales</span><span class="stat-value">₹${money(report.totals.gross - report.totals.returns)}</span></article><article class="card stat"><span>Pieces</span><span class="stat-value">${report.totals.pieces}</span></article></section>`;
-  const table = `<table><thead><tr><th>Date</th><th>Bill</th><th>Manager</th><th>Customer</th><th>Type</th><th>Item</th><th>Qty</th><th>MRP</th><th>Free</th><th>Line</th><th>Cash</th><th>Online</th><th>Remark</th></tr></thead><tbody>${report.rows.map(r => `<tr><td>${new Date(r.createdAt).toLocaleString()}</td><td>${r.billNumber}</td><td>${esc(r.managerName)}</td><td>${esc(r.customerName || '')}</td><td>${r.type}</td><td>${esc(r.itemName)}</td><td>${r.quantity}</td><td>₹${money(r.mrp)}</td><td>${r.isFree ? 'Yes' : 'No'}</td><td>₹${money(r.lineTotal)}</td><td>₹${money(r.cashAmount)}</td><td>₹${money(r.onlineAmount)}</td><td>${esc(r.remark || '')}</td></tr>`).join('') || '<tr><td colspan="13" class="empty">No sales in this date range.</td></tr>'}</tbody></table>`;
-  render(req, res, 'table-page', { title: 'Sales Reports', intro, table });
+  render(req, res, 'owner-reports', { title: 'Sales Reports', range, report });
 }));
 
 app.get('/owner/reports.csv', requireRole('owner'), aw(async (req, res) => {
@@ -403,9 +413,7 @@ app.get('/owner/reports.csv', requireRole('owner'), aw(async (req, res) => {
 
 app.get('/owner/users', requireRole('owner'), aw(async (req, res) => {
   const rows = (await collections().users.find({}, { projection: { passwordHash: 0 } }).sort({ createdAt: -1 }).toArray()).map(mapDoc);
-  const form = `<form method="post" action="/owner/users" class="form-grid"><label>Unique User ID<input name="userId" required placeholder="Numeric or staff code"></label><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label><label>Role<select name="role"><option value="manager">Cart Manager</option><option value="owner">Owner</option></select></label><label>Temporary password<input name="password" type="password" minlength="8" required></label><button class="primary">Create user</button></form>`;
-  const table = `<table><thead><tr><th>User ID</th><th>Name</th><th>Email</th><th>Role</th><th>Password setup</th><th>Active</th><th>Actions</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.userId || '—')}</td><td>${esc(r.name)}</td><td>${esc(r.email)}</td><td>${r.role}</td><td><span class="badge ${r.mustChangePassword ? 'warn' : 'ok'}">${r.mustChangePassword ? 'Required' : 'Complete'}</span></td><td><span class="badge ${r.active ? 'ok' : 'danger'}">${r.active ? 'Active' : 'Inactive'}</span></td><td><form class="actions" method="post" action="/owner/users/${r.id}/toggle"><button class="btn secondary">Activate/deactivate</button></form></td></tr>`).join('')}</tbody></table>`;
-  render(req, res, 'table-page', { title: 'User Management', form, table });
+  render(req, res, 'owner-users', { title: 'User Management', rows });
 }));
 
 app.post('/owner/users', requireRole('owner'), aw(async (req, res) => {
@@ -427,21 +435,17 @@ app.post('/owner/users/:id/toggle', requireRole('owner'), aw(async (req, res) =>
 
 app.get('/manager', requireRole('manager'), aw(async (req, res) => {
   const s = await todaySummary(req.user.id);
-  const intro = `<section class="grid stats"><article class="card stat"><span>Today’s pieces sold</span><span class="stat-value">${s.pieces}</span></article><article class="card stat"><span>Today’s sales amount</span><span class="stat-value">₹${money(s.total)}</span></article><article class="card stat"><span>Cash amount</span><span class="stat-value">₹${money(s.cash)}</span></article><article class="card stat"><span>Online amount</span><span class="stat-value">₹${money(s.online)}</span></article></section>`;
-  render(req, res, 'table-page', { title: 'Manager Home', intro, table: '' });
+  render(req, res, 'manager-home', { title: 'Manager Home', s });
 }));
 
 app.get('/manager/stock', requireRole('manager'), aw(async (req, res) => {
   const rows = await itemRows(true);
-  const table = `<table><thead><tr><th>Item</th><th>Main Fridge total pcs</th><th>Second Fridge boxes</th><th>Pieces/box</th><th>Low threshold</th><th>Status</th></tr></thead><tbody>${rows.map(r => { const display = stockDisplay(r); return `<tr><td>${esc(r.name)}</td><td>${display.mainPieces}</td><td>${display.secondBoxes}</td><td>${r.piecesPerBox}</td><td>${r.lowStockThreshold}</td><td><span class="badge ${r.mainFridgeQty <= r.lowStockThreshold ? 'danger' : 'ok'}">${r.mainFridgeQty <= r.lowStockThreshold ? 'Low stock' : 'Available'}</span></td></tr>`; }).join('') || '<tr><td colspan="6" class="empty">No stock available.</td></tr>'}</tbody></table>`;
-  render(req, res, 'table-page', { title: 'Available Stock', table });
+  render(req, res, 'manager-stock', { title: 'Available Stock', rows, stockDisplay });
 }));
 
 app.get('/manager/pos', requireRole('manager'), aw(async (req, res) => {
   const rows = await itemRows(true);
-  const billTabs = Array.from({ length: 5 }, (_, i) => `<button class="bill-tab ${i === 0 ? 'active' : ''}" type="button" data-draft-slot="${i + 1}">Bill ${i + 1}</button>`).join('');
-  const body = `<form method="post" action="/manager/pos" class="zepto-pos pos-billing" data-pos-form><header class="pos-storefront"><label class="pos-search">🔎<input data-product-search placeholder="Search by kulfi name or item code"></label><div class="filter-panel"><label>Stock view<select data-stock-filter><option value="all">All active items</option><option value="in">Main Fridge available</option><option value="low">Refill needed</option></select></label><button class="btn secondary" type="button" data-product-reset>Reset</button></div></header><section class="pos-market"><main class="market-body"><div class="product-board">${rows.map(r => { const display = stockDisplay(r); const inStock = r.mainFridgeQty > 0; return `<article class="item-row product-card ${r.mainFridgeQty <= r.lowStockThreshold ? 'low' : ''}" data-price="${Number(r.mrp || 0)}" data-product-name="${esc(`${r.name} ${r.itemCode || ''}`).toLowerCase()}" data-stock-status="${inStock ? 'in' : 'low'}"><div class="product-media">${r.imageData ? `<img class="item-thumb" src="${esc(r.imageData)}" alt="${esc(r.name)} image">` : '<span>🍦</span>'}</div><div class="product-info"><h3>${esc(r.name)}</h3><div class="price-line"><strong>₹${money(r.mrp)}</strong><span class="price-action"><button class="btn primary add-btn" type="button" data-qty-step="1">ADD</button><span class="zepto-counter" aria-label="Quantity counter"><button type="button" data-qty-step="-1">−</button><span data-qty-display>0</span><button type="button" data-qty-step="1">+</button></span></span></div><p class="stock-line">Main Fridge: <strong>${display.mainPieces} pcs</strong></p><label class="inline-check"><input class="free-toggle" type="checkbox" name="free_${r.id}" value="1"> Complimentary</label></div><input class="sale-qty" name="qty_${r.id}" type="number" min="0" max="${r.mainFridgeQty}" value="0" inputmode="numeric"><output class="line-total">₹0.00</output></article>`; }).join('') || '<p class="empty">No active items are available.</p>'}</div></main><aside class="card payment-card pos-cart"><h2>Cart</h2><div class="cart-preview" data-cart-preview><p class="empty">No items added yet.</p></div><div class="cart-total-row"><strong>Total</strong><strong data-cart-total>₹0.00</strong></div><label>Customer Name<input name="customerName" data-draft-field placeholder="Customer name"></label><div class="payment-split"><label>Cash<input name="cashAmount" data-cash-amount type="number" min="0" step="0.01" value="0.00"></label><label>Online<input name="onlineAmount" data-online-amount type="number" min="0" step="0.01" value="0.00"></label></div><input name="totalAmountPreview" data-total-amount type="hidden" value="0.00"><div class="payment-actions"><button class="btn secondary" type="button" data-pay-mode="cash">All Cash</button><button class="btn secondary" type="button" data-pay-mode="online">All Online</button></div><label>Remarks<textarea name="remark" rows="3" data-draft-field placeholder="Global bill remarks"></textarea></label><button class="primary save-bill" data-finalize-bill>Save Bill</button></aside></section><div class="draft-dock"><span class="draft-label">Draft bills</span>${billTabs}<button class="draft-clear" type="button" data-draft-delete>Clear</button></div><div class="mobile-cart-bar"><span>🛒 <strong data-mobile-cart-count>0 items</strong><small>Total</small></span><strong data-mobile-cart-total>₹0.00</strong></div></form>`;
-  render(req, res, 'table-page', { title: 'POS Billing', intro: body, table: '' });
+  render(req, res, 'manager-pos', { title: 'POS Billing', rows, stockDisplay });
 }));
 
 app.post('/manager/pos', requireRole('manager'), aw(async (req, res) => {
@@ -477,8 +481,7 @@ app.post('/manager/pos', requireRole('manager'), aw(async (req, res) => {
 
 app.get('/manager/returns', requireRole('manager'), aw(async (req, res) => {
   const rows = await returnableLines(req.user.id);
-  const table = `<table><thead><tr><th>Bill</th><th>Item</th><th>Sold</th><th>Returned</th><th>Remaining</th><th>Refund/pc</th><th>Return</th></tr></thead><tbody>${rows.map(r => `<tr><td>${r.billNumber}</td><td>${esc(r.name)}</td><td>${r.quantity}</td><td>${r.returnedQty}</td><td>${r.quantity - r.returnedQty}</td><td>₹${r.isFree ? '0.00' : money(r.mrp)}</td><td><form class="actions" method="post" action="/manager/returns"><input type="hidden" name="saleItemId" value="${r.id}"><input name="quantity" type="number" min="1" max="${r.quantity - r.returnedQty}"><button class="btn secondary">Process return</button></form></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No returnable items for your sales today.</td></tr>'}</tbody></table>`;
-  render(req, res, 'table-page', { title: 'POS Returns', table });
+  render(req, res, 'manager-returns', { title: 'POS Returns', rows });
 }));
 
 app.post('/manager/returns', requireRole('manager'), aw(async (req, res) => {
@@ -502,18 +505,25 @@ app.post('/manager/returns', requireRole('manager'), aw(async (req, res) => {
   } catch (e) { redirectWith(res, '/manager/returns', 'err', e.message); }
 }));
 
+app.use((req, res) => {
+  render(req, res, 'error', { title: 'Page not found', status: 404, message: "The page you're looking for doesn't exist or may have moved." });
+});
+
 app.use((err, req, res, next) => {
-  const config = databaseConfigSummary();
-  console.error('Application startup/request error', {
-    message: err.message,
-    name: err.name,
-    mongo: config
-  });
-  const reason = config.hasUri ? err.message : 'MONGODB_URI is missing in this deployment environment';
-  const message = process.env.NODE_ENV === 'production'
-    ? `Database connection failed or the application could not finish startup. ${reason}. Check Vercel Project Settings > Environment Variables and MongoDB Atlas Network Access, then redeploy.`
-    : `Database error or unexpected application error: ${err.message}`;
-  res.status(503).send(message);
+  const status = err.status && err.status < 500 ? err.status : 503;
+  console.error('Application error', { message: err.message, name: err.name, status });
+  let message;
+  if (err.status && err.status < 500) {
+    message = err.message;
+  } else {
+    const config = databaseConfigSummary();
+    const reason = config.hasUri ? err.message : 'MONGODB_URI is missing in this deployment environment';
+    message = process.env.NODE_ENV === 'production'
+      ? `Database connection failed or the application could not finish startup. ${reason}. Check Vercel Project Settings > Environment Variables and MongoDB Atlas Network Access, then redeploy.`
+      : `Database error or unexpected application error: ${err.message}`;
+  }
+  const title = status === 403 ? 'Access denied' : status === 429 ? 'Too many attempts' : 'Something went wrong';
+  render(req, res, 'error', { title, status, message });
 });
 
 async function start() {

@@ -1,0 +1,6 @@
+<section class="grid stats">
+<article class="card stat"><span>Today’s pieces sold</span><span class="stat-value"><%= s.pieces %></span></article>
+<article class="card stat"><span>Today’s sales amount</span><span class="stat-value">₹<%= money(s.total) %></span></article>
+<article class="card stat"><span>Cash amount</span><span class="stat-value">₹<%= money(s.cash) %></span></article>
+<article class="card stat"><span>Online amount</span><span class="stat-value">₹<%= money(s.online) %></span></article>
+</section>

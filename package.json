@@ -1,27 +1,37 @@
 {
   "name": "desi-mastaani-kulfi-manager",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "type": "commonjs",
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
-    "dev": "node src/server.js",
-    "start": "NODE_ENV=production node src/server.js",
-    "db:seed": "node src/db.js --seed",
-    "check": "node --check src/server.js && node --check src/db.js && node --check src/auth.js && node --check api/index.js && node --check scripts/check-conflicts.js",
-    "check:conflicts": "node scripts/check-conflicts.js",
-    "check:reported-conflicts": "node scripts/check-conflicts.js README.md src/db.js src/server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint",
+    "db:seed": "tsx scripts/seed.ts",
+    "check:conflicts": "node scripts/check-conflicts.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.7",
     "csv-stringify": "^6.5.2",
-    "dotenv": "^16.4.7",
-    "ejs": "^3.1.10",
-    "express": "^4.21.2",
-    "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2",
+    "jose": "^5.9.6",
     "mongodb": "^6.12.0",
-    "morgan": "^1.10.0",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "dotenv": "^16.4.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   }
 }

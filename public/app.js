@@ -237,8 +237,33 @@
     });
   }
 
+  function initNoticeDismiss() {
+    document.querySelectorAll('[data-notice-close]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const notice = button.closest('.notice');
+        if (!notice) return;
+        notice.addEventListener('transitionend', () => notice.remove(), { once: true });
+        notice.classList.add('notice-hide');
+      });
+    });
+  }
+
+  function initFormSubmitGuards() {
+    document.querySelectorAll('form').forEach((form) => {
+      form.addEventListener('submit', () => {
+        form.querySelectorAll('button[type="submit"], button:not([type])').forEach((button) => {
+          if (button.disabled) return;
+          button.disabled = true;
+          button.textContent = 'Please wait…';
+        });
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initPosBilling();
     initImageUploads();
+    initNoticeDismiss();
+    initFormSubmitGuards();
   });
 }());
