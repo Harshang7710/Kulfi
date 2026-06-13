@@ -1,0 +1,14 @@
+import type { MetadataRoute } from 'next';
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'Desi Mastaani Matka Kulfi Franchise Manager',
+    short_name: 'Matka Kulfi',
+    description: 'POS, inventory, and reporting workspace for Desi Mastaani Matka Kulfi franchise staff.',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#fffaf0',
+    theme_color: '#e83f46',
+    icons: [{ src: '/logo.svg', sizes: 'any', type: 'image/svg+xml' }]
+  };
+}

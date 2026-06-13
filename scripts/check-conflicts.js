@@ -4,7 +4,7 @@ const { existsSync, readFileSync } = require('node:fs');
 
 const marker = /^(<{7}|={7}|>{7})/m;
 const textExtensions = new Set([
-  '.css', '.ejs', '.env', '.example', '.html', '.js', '.json', '.md', '.svg', '.txt', '.yml', '.yaml'
+  '.css', '.env', '.example', '.html', '.js', '.json', '.md', '.svg', '.ts', '.tsx', '.txt', '.yml', '.yaml'
 ]);
 
 function isLikelyTextFile(file) {
