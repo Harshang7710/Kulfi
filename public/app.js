@@ -139,12 +139,12 @@
       if (mode === 'cash') {
         lastEdited = 'cash';
         markPaymentMode('cash');
-        setPayment(total(), 0);
+        cashInput.focus();
       }
       if (mode === 'online') {
         lastEdited = 'online';
         markPaymentMode('online');
-        setPayment(0, total());
+        onlineInput.focus();
       }
       if (event.target.closest('[data-draft-delete]')) {
         const activeSlot = form.querySelector('[data-draft-slot].active')?.dataset.draftSlot || '1';
@@ -193,6 +193,7 @@
     };
     form.addEventListener('input', (event) => { if (event.target.matches('[data-product-search]')) applyProductFilters(); });
     form.addEventListener('change', (event) => { if (event.target.matches('[data-stock-filter]')) applyProductFilters(); });
+    form.querySelector('[data-product-search-button]')?.addEventListener('click', applyProductFilters);
     form.querySelector('[data-product-reset]')?.addEventListener('click', () => {
       const search = form.querySelector('[data-product-search]');
       const stock = form.querySelector('[data-stock-filter]');
