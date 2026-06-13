@@ -11,7 +11,7 @@ declare global {
 
 function cleanEnv(value: string | undefined): string {
   const trimmed = String(value || '').trim();
-  return trimmed.replace(/^['"]|['"]$/g, '');
+  return trimmed.replace(/^[\'\"]|[\'\"]$/g, '');
 }
 
 function mongoUri(): string {
@@ -103,18 +103,13 @@ export async function connect(): Promise<Db> {
   return database;
 }
 
-/** Lazily connects, ensures indexes, and seeds default data on first call. Cached/retried like the previous Express ensureRuntimeReady(). */
+/** Lazily connects and ensures indexes. Seed explicitly with `npm run db:seed`. */
 export async function getDb(): Promise<Db> {
   if (!readyPromise) {
-    readyPromise = connect()
-      .then(async (db) => {
-        await seedIfEmpty();
-        return db;
-      })
-      .catch((error) => {
-        readyPromise = undefined;
-        throw error;
-      });
+    readyPromise = connect().catch((error) => {
+      readyPromise = undefined;
+      throw error;
+    });
   }
   return readyPromise;
 }

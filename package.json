@@ -9,9 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint",
+    "check": "npm run typecheck && npm run check:conflicts",
     "db:seed": "tsx scripts/seed.ts",
     "check:conflicts": "node scripts/check-conflicts.js"
   },

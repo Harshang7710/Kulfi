@@ -22,6 +22,7 @@ function buildCsp(nonce: string): string {
 }
 
 const AUTH_ROUTES = new Set(['/login', '/password-setup']);
+const PUBLIC_ROUTES = new Set(['/', '/health', '/robots.txt', '/manifest.webmanifest']);
 
 export async function middleware(request: NextRequest) {
   const nonce = generateNonce();
@@ -29,22 +30,16 @@ export async function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', csp);
 
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const session = token ? await verifySession(token) : null;
-
-  const isAuthRoute = AUTH_ROUTES.has(pathname);
-  const isProtectedRoute = !isAuthRoute && pathname !== '/';
+  const isProtectedRoute = !AUTH_ROUTES.has(pathname) && !PUBLIC_ROUTES.has(pathname);
 
   if (!session && isProtectedRoute) {
-    const url = new URL('/login', request.url);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // Note: "already logged in, redirect away from /login or /password-setup" is handled by
-  // those pages via getCurrentUser() (DB-verified). Doing it here from the JWT alone could
-  // loop for an inactive user whose token hasn't expired yet.
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
@@ -52,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo.svg|manifest.webmanifest).*)']
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo.svg).*)']
 };

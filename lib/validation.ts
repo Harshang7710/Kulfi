@@ -20,15 +20,15 @@ export const movementSchema = z.object({
   movementAction: z.enum(['transfer_second_to_main', 'vendor_stock_in', 'vendor_return']),
   itemId: z.string().min(1),
   boxes: z.coerce.number().int().positive(),
-  notes: z.string().optional().default('')
+  notes: z.string().trim().max(500).optional().default('')
 });
 export type MovementAction = z.infer<typeof movementSchema>['movementAction'];
 
 /** Create-user schema — used by createUserAction */
 export const userSchema = z.object({
-  userId: z.string().min(1),
-  name: z.string().min(1),
-  email: z.string().email(),
+  userId: z.string().trim().min(1).max(50),
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email(),
   role: z.enum(['owner', 'manager']),
   password: z.string().min(8)
 });
@@ -41,7 +41,7 @@ export const passwordSetupSchema = z.object({
 
 /** Login schema — used by loginAction */
 export const loginSchema = z.object({
-  identifier: z.string().min(1),
+  identifier: z.string().trim().min(1),
   password: z.string().min(1)
 });
 
@@ -49,4 +49,22 @@ export const loginSchema = z.object({
 export const returnSchema = z.object({
   saleItemId: z.string().min(1),
   quantity: z.coerce.number().int().positive()
+});
+
+/** POS sale schema — validates all client-provided billing data at the server boundary. */
+export const saleSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        itemId: z.string().min(1),
+        qty: z.coerce.number().int().positive(),
+        free: z.boolean()
+      })
+    )
+    .min(1, 'Sale rejected: no items are selected')
+    .max(100),
+  cashAmount: z.coerce.number().finite().min(0),
+  onlineAmount: z.coerce.number().finite().min(0),
+  customerName: z.string().trim().max(120),
+  remark: z.string().trim().max(500)
 });
