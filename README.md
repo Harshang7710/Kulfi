@@ -51,6 +51,8 @@ A responsive MongoDB-backed full-stack web application for billing, POS, two-fri
 
 ## Vercel deployment
 
+The current production branch is `Mian`. Keep Vercel production deployments pointed at this branch so production releases come from the intended source.
+
 This app is Vercel-ready through `api/index.js` and `vercel.json`. The serverless entry point lazily connects to MongoDB and seeds default data on the first request, while `vercel.json` explicitly includes the `views/` and `public/` assets needed by Express/EJS at runtime using Vercel's string glob format. The app does not try to create a local `/data` directory or use a filesystem database in Vercel's read-only runtime.
 
 Set these Vercel environment variables before deploying:
