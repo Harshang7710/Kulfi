@@ -327,13 +327,40 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
             {!filteredItems.length && <p className="empty">No active items are available.</p>}
           </div>
         </main>
-        <aside className={`card payment-card pos-cart ${cartOpen ? 'open' : ''}`}>
-          <div className="cart-head">
-            <h2>Cart</h2>
-            <button type="button" className="cart-close" onClick={() => setCartOpen(false)} aria-label="Close cart">
-              &times;
-            </button>
-          </div>
+      </section>
+
+      <div className={`cart-backdrop ${cartOpen ? 'open' : ''}`} onClick={() => setCartOpen(false)} aria-hidden="true" />
+      <aside className={`cart-drawer ${cartOpen ? 'open' : ''}`}>
+        <button
+          type="button"
+          className="cart-handle"
+          onClick={() => setCartOpen((v) => !v)}
+          aria-expanded={cartOpen}
+          aria-controls="pos-cart-body"
+        >
+          <span className="cart-handle-info">
+            🛒 <strong>{totalPieces} items</strong>
+            <small>
+              {lines.length} {lines.length === 1 ? 'line' : 'lines'}
+            </small>
+          </span>
+          <span className="cart-handle-total">
+            ₹{money(billTotal)}
+            <svg
+              className="cart-handle-chevron"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </button>
+        <div className="cart-body" id="pos-cart-body">
           <div className="cart-preview">
             {lines.length ? (
               lines.map((line) => (
@@ -389,13 +416,8 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
           <button className="btn primary save-bill" type="button" onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Saving…' : `Save Bill · ₹${money(billTotal)}`}
           </button>
-        </aside>
-        <div
-          className={`cart-backdrop ${cartOpen ? 'open' : ''}`}
-          onClick={() => setCartOpen(false)}
-          aria-hidden="true"
-        />
-      </section>
+        </div>
+      </aside>
       <div className="draft-dock">
         <span className="draft-label">Draft bills</span>
         {DRAFT_SLOTS.map((slot) => (
@@ -412,15 +434,6 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
           Clear
         </button>
       </div>
-      <button type="button" className="mobile-cart-bar" onClick={() => setCartOpen(true)}>
-        <span>
-          🛒 <strong>{totalPieces} items</strong>
-        </span>
-        <span className="mcb-total">
-          ₹{money(billTotal)}
-          <small>View cart ›</small>
-        </span>
-      </button>
     </div>
   );
 }

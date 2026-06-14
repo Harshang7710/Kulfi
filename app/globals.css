@@ -666,6 +666,8 @@ body.route-manager-pos .notice { flex: none; }
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* Reserve room for the collapsed cart drawer pinned to the bottom edge. */
+  padding-bottom: 64px;
 }
 
 /* Search + filter bar (fixed) */
@@ -695,16 +697,14 @@ body.route-manager-pos .notice { flex: none; }
 .filter-panel select { height: 46px; min-width: 170px; }
 .filter-panel .btn { height: 46px; }
 
-/* Market: scrolling product board + fixed cart */
+/* Market: full-width scrolling product board (cart lives in the bottom drawer) */
 .pos-market {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 344px;
-  gap: 16px;
   overflow: hidden;
 }
 .market-body {
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
@@ -820,19 +820,72 @@ body.route-manager-pos .notice { flex: none; }
 .free-toggle { font-size: 12px; }
 .line-total { display: none; }
 
-/* Cart panel (fixed column on desktop) */
-.pos-cart {
-  align-self: stretch;
+/* Cart — bottom drawer: a slim horizontal bar by default that expands upward
+   into a scrollable panel. Shared across desktop and mobile. */
+.cart-drawer {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 80;
+  height: min(78vh, 660px);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: 0 -12px 44px rgba(44, 28, 22, .16);
+  transform: translateY(calc(100% - 60px));
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1);
+}
+.cart-drawer.open { transform: translateY(0); }
+
+.cart-handle {
+  flex: none;
+  height: 60px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 22px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.cart-handle:hover { background: transparent; transform: none; box-shadow: none; }
+.cart-handle::before {
+  content: '';
+  position: absolute;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  width: 42px; height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+.cart-handle-info { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--ink-soft); }
+.cart-handle-info strong { font-size: 15px; font-weight: 700; color: var(--ink); }
+.cart-handle-info small { color: var(--muted); font-weight: 600; }
+.cart-handle-total { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; color: var(--brand-700); }
+.cart-handle-chevron { width: 20px; height: 20px; color: var(--muted); transition: transform .32s; }
+.cart-drawer:not(.open) .cart-handle-chevron { transform: rotate(180deg); }
+
+.cart-body {
+  flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px;
-  border-radius: var(--r-xl);
+  padding: 4px 22px 20px;
+  border-top: 1px solid var(--line);
+  overflow: hidden;
 }
-.cart-head { display: flex; align-items: center; justify-content: space-between; }
-.cart-head h2 { margin: 0; }
-.cart-close { display: none; background: transparent; color: var(--muted); font-size: 24px; padding: 0 6px; }
 .cart-preview {
   flex: 1;
   min-height: 90px;
@@ -840,7 +893,6 @@ body.route-manager-pos .notice { flex: none; }
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   padding: 12px 2px;
 }
@@ -899,9 +951,17 @@ body.route-manager-pos .notice { flex: none; }
 .draft-clear { margin-left: auto; color: var(--brand-700); }
 .draft-clear:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
 
-/* Mobile cart trigger + backdrop (hidden on desktop) */
-.mobile-cart-bar { display: none; }
-.cart-backdrop { display: none; }
+/* Dim overlay shown behind the cart drawer while it is expanded. */
+.cart-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  background: rgba(44, 28, 22, .42);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.cart-backdrop.open { opacity: 1; pointer-events: auto; }
 
 /* =============================================================================
    Responsive
@@ -954,51 +1014,12 @@ body.route-manager-pos .notice { flex: none; }
   .pos-storefront { grid-template-columns: 1fr; }
   .filter-panel { display: grid; grid-template-columns: 1fr auto; }
   .filter-panel select { min-width: 0; }
-  .pos-market { grid-template-columns: 1fr; }
 
-  .pos-cart {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 80;
-    max-height: 86vh;
-    border-radius: var(--r-xl) var(--r-xl) 0 0;
-    box-shadow: var(--shadow-lg);
-    transform: translateY(110%);
-    transition: transform .28s cubic-bezier(.2, .8, .2, 1);
-  }
-  .pos-cart.open { transform: translateY(0); }
-  .cart-close { display: inline-flex; }
-  .cart-backdrop {
-    display: block;
-    position: fixed; inset: 0;
-    z-index: 70;
-    background: rgba(44, 28, 22, .42);
-    opacity: 0; pointer-events: none;
-    transition: opacity .25s;
-  }
-  .cart-backdrop.open { opacity: 1; pointer-events: auto; }
-
-  .mobile-cart-bar {
-    position: fixed;
-    left: 12px; right: 12px; bottom: 12px;
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 12px 18px;
-    height: 56px;
-    border: 0;
-    border-radius: var(--r-lg);
-    background: var(--brand-gradient);
-    color: #fff;
-    font-weight: 700;
-    box-shadow: var(--shadow-lg);
-  }
-  .mobile-cart-bar strong { font-size: 15px; }
-  .mobile-cart-bar small { display: block; font-size: 11px; font-weight: 600; opacity: .85; }
-  .mobile-cart-bar .mcb-total { display: flex; align-items: center; gap: 8px; font-size: 16px; }
-  body.route-manager-pos .content { padding-bottom: 84px; }
+  /* POS scrolls as a normal page on phones; the cart drawer stays pinned. */
+  .pos-billing { display: block; padding-bottom: 0; }
+  .market-body { height: auto; }
+  body.route-manager-pos .content { padding-bottom: 80px; }
+  .cart-drawer { height: min(82vh, 600px); }
 }
 
 @media (max-width: 560px) {
