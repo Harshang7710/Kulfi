@@ -12,10 +12,6 @@ export default async function PageHeader({ title }: { title: string }) {
           <p className="eyebrow">{user?.role === 'owner' ? 'Owner Control Center' : 'Manager Workspace'}</p>
           <h1>{title}</h1>
         </div>
-        <div className="userpill">
-          {user?.name}
-          {user?.userId ? ` · ID ${user.userId}` : ''}
-        </div>
       </header>
       <Suspense fallback={null}>
         <Notice />
