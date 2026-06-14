@@ -820,10 +820,12 @@ body.route-manager-pos .notice { flex: none; }
 .free-toggle { font-size: 12px; }
 .line-total { display: none; }
 
-/* Cart — always-visible column on the right; only the line list scrolls. */
+/* Cart — always-visible column on the right; the whole panel scrolls so the
+   line list and the payment/Save controls all stay reachable on any height. */
 .pos-cart {
   align-self: stretch;
   min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -846,9 +848,10 @@ body.route-manager-pos .notice { flex: none; }
   white-space: nowrap;
 }
 .cart-preview {
-  flex: 1;
-  min-height: 90px;
-  overflow-y: auto;
+  /* Grows to fill the panel when the bill is short (Save sits at the bottom);
+     when the bill is long the whole .pos-cart scrolls instead of clipping. */
+  flex: 1 0 auto;
+  min-height: 64px;
   display: flex;
   flex-direction: column;
   gap: 8px;
