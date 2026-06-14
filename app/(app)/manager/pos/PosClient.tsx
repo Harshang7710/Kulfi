@@ -58,7 +58,6 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
   const [lastEdited, setLastEdited] = useState<'cash' | 'online'>('cash');
   const [activeDraftSlot, setActiveDraftSlot] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -215,7 +214,6 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
     if (result.ok) {
       writeDrafts(readDrafts().filter((d) => d.id !== `draft-slot-${activeDraftSlot}`));
       clearBill();
-      setCartOpen(false);
       setNotice({ type: 'success', message: `Bill saved successfully (Bill #${result.billNumber})` });
       router.refresh();
     } else {
@@ -327,40 +325,11 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
             {!filteredItems.length && <p className="empty">No active items are available.</p>}
           </div>
         </main>
-      </section>
-
-      <div className={`cart-backdrop ${cartOpen ? 'open' : ''}`} onClick={() => setCartOpen(false)} aria-hidden="true" />
-      <aside className={`cart-drawer ${cartOpen ? 'open' : ''}`}>
-        <button
-          type="button"
-          className="cart-handle"
-          onClick={() => setCartOpen((v) => !v)}
-          aria-expanded={cartOpen}
-          aria-controls="pos-cart-body"
-        >
-          <span className="cart-handle-info">
-            🛒 <strong>{totalPieces} items</strong>
-            <small>
-              {lines.length} {lines.length === 1 ? 'line' : 'lines'}
-            </small>
-          </span>
-          <span className="cart-handle-total">
-            ₹{money(billTotal)}
-            <svg
-              className="cart-handle-chevron"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </span>
-        </button>
-        <div className="cart-body" id="pos-cart-body">
+        <aside className="pos-cart">
+          <header className="cart-head">
+            <h2>Cart</h2>
+            <span className="cart-count">{totalPieces} items</span>
+          </header>
           <div className="cart-preview">
             {lines.length ? (
               lines.map((line) => (
@@ -416,8 +385,8 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
           <button className="btn primary save-bill" type="button" onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Saving…' : `Save Bill · ₹${money(billTotal)}`}
           </button>
-        </div>
-      </aside>
+        </aside>
+      </section>
       <div className="draft-dock">
         <span className="draft-label">Draft bills</span>
         {DRAFT_SLOTS.map((slot) => (
