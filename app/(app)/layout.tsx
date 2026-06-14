@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import Sidebar from '@/components/Sidebar';
+import TopNav from '@/components/TopNav';
 import { logoutAction } from './logout/actions';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +10,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="app">
-      <Sidebar role={user.role} logoutAction={logoutAction} />
+      <TopNav
+        user={{ name: user.name, email: user.email, role: user.role, userId: user.userId }}
+        logoutAction={logoutAction}
+      />
       <main className="content" id="main">
         {children}
       </main>

@@ -202,100 +202,200 @@ button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
 }
 .btn.danger:hover, button.danger:hover { background: #fbdcd6; }
 
-/* ---------- App shell ------------------------------------------------------- */
+/* ---------- App shell (top navbar) ------------------------------------------ */
+:root { --nav-h: 66px; }
+
 .app {
-  display: grid;
-  grid-template-columns: 252px 1fr;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
-.sidebar {
+/* Glassy sticky top navigation */
+.topnav {
   position: sticky;
   top: 0;
-  height: 100vh;
+  z-index: 100;
+  height: var(--nav-h);
+  flex: none;
+  background: rgba(255, 252, 250, .82);
+  backdrop-filter: saturate(150%) blur(18px);
+  -webkit-backdrop-filter: saturate(150%) blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+.topnav-inner {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 20px 16px;
-  background: linear-gradient(185deg, var(--surface-soft), var(--brand-50));
-  border-right: 1px solid var(--line);
-  overflow: auto;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 8px 18px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid var(--line);
+  gap: 11px;
+  flex-shrink: 0;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 16px;
-  line-height: 1.15;
+  font-size: 15px;
+  line-height: 1.1;
   color: var(--brand-800);
 }
 .brand img {
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(232, 64, 47, .18));
+  filter: drop-shadow(0 3px 7px rgba(232, 64, 47, .2));
   flex-shrink: 0;
 }
-.brand span { font-weight: 700; }
+.brand span { font-weight: 700; max-width: 130px; }
 .brand span span { font-weight: 500; color: var(--brand-600); }
 
-.sidebar nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.nav {
+.topnav-links {
   display: flex;
   align-items: center;
-  gap: 11px;
-  width: 100%;
-  padding: 11px 13px;
-  border-radius: var(--r);
+  gap: 2px;
+  margin-left: 14px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.topnav-links::-webkit-scrollbar { display: none; }
+
+.nav {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 15px;
+  border-radius: var(--pill);
   color: var(--ink-soft);
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
   border: 1px solid transparent;
-  text-align: left;
   background: transparent;
-  transition: background .15s, color .15s, border-color .15s;
+  transition: background .15s, color .15s;
 }
-.nav:hover { background: var(--surface); border-color: var(--line); color: var(--brand-700); transform: none; box-shadow: none; }
-.nav.active {
-  background: var(--brand-gradient);
-  color: #fff;
+.nav:hover { background: var(--brand-50); color: var(--brand-700); transform: none; box-shadow: none; }
+.nav.active { background: var(--brand-gradient); color: #fff; box-shadow: var(--shadow-sm); }
+
+.nav-toggle {
+  display: none;
+  width: 40px; height: 40px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--brand-800);
+  border: 1px solid var(--line);
+}
+.nav-toggle svg { width: 20px; height: 20px; }
+
+/* Avatar + user menu (top-right) */
+.topnav-user { position: relative; margin-left: auto; flex-shrink: 0; }
+.avatar-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 5px;
+  border-radius: var(--pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
 }
-.nav.active .nav-icon { opacity: 1; }
-.nav-icon {
-  width: 20px; height: 20px;
-  flex-shrink: 0;
+.avatar-btn:hover { border-color: var(--brand-200); transform: none; box-shadow: var(--shadow-sm); }
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  opacity: .85;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .02em;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .35);
 }
-.nav-icon svg { width: 18px; height: 18px; }
+.avatar-manager { background: linear-gradient(140deg, var(--brand-400), var(--brand-600)); }
+.avatar-owner { background: linear-gradient(140deg, var(--gold-400), var(--gold-500)); color: #5a3c05; }
+.avatar-lg { width: 46px; height: 46px; font-size: 16px; }
+.avatar-meta { display: flex; flex-direction: column; line-height: 1.2; text-align: left; }
+.avatar-meta strong { font-size: 13px; font-weight: 700; color: var(--ink); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar-meta small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.avatar-chevron { width: 16px; height: 16px; color: var(--muted); flex-shrink: 0; }
 
-.sidebar form { margin-top: auto; }
-.nav.logout {
-  margin-top: 8px;
-  color: var(--brand-700);
-  border-color: var(--line);
+.user-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 110;
+  width: 268px;
   background: var(--surface);
-  justify-content: flex-start;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  transform-origin: top right;
+  animation: popIn .14s ease both;
 }
-.nav.logout:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
+.user-menu-head { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.user-menu-id { display: grid; gap: 1px; min-width: 0; }
+.user-menu-id strong { font-size: 14px; color: var(--ink); }
+.user-menu-id small { font-size: 12px; color: var(--muted); }
+.user-menu-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.user-menu-item svg { width: 17px; height: 17px; }
+.user-menu-item:hover { background: var(--surface-soft); transform: none; box-shadow: none; }
+.user-menu-item.danger:hover { background: var(--danger-bg); color: var(--danger); }
+
+/* Confirmation modal (logout, etc.) */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(44, 28, 22, .45);
+  backdrop-filter: blur(3px);
+  animation: fadeIn .15s ease both;
+}
+.modal {
+  width: min(400px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 26px;
+  box-shadow: var(--shadow-lg);
+  animation: popIn .16s ease both;
+}
+.modal h3 { margin: 0 0 6px; font-size: 1.2rem; }
+.modal p { margin: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.modal-actions .btn { min-width: 96px; }
+
+@keyframes popIn { from { opacity: 0; transform: scale(.96) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .content {
+  flex: 1;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
   min-width: 0;
-  padding: 28px 32px 40px;
+  padding: 28px 32px 44px;
 }
 /* Vertical rhythm between top-level blocks (bare cards, sections, forms). */
 .content > .card,
@@ -316,21 +416,6 @@ button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
   font-size: clamp(22px, 3vw, 30px);
   color: var(--ink);
 }
-.userpill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--pill);
-  padding: 8px 14px;
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--brand-700);
-  box-shadow: var(--shadow-sm);
-  white-space: nowrap;
-}
-
 /* ---------- Cards & grids --------------------------------------------------- */
 .card {
   background: var(--surface);
@@ -560,14 +645,17 @@ table input, table select { min-width: 84px; }
    POS — fixed shell, only the product grid scrolls. Blinkit-style cards.
    ========================================================================== */
 
-/* On the POS route the workspace fills the viewport; nothing scrolls except
-   the product board (and the cart line list / mobile sheet). */
+/* On the POS route the workspace fills the viewport below the navbar; nothing
+   scrolls except the product board (and the cart line list / mobile sheet).
+   The content flexes to fill the remaining height under the sticky top nav. */
+body.route-manager-pos { overflow: hidden; }
+body.route-manager-pos .app { height: 100vh; }
 body.route-manager-pos .content {
-  height: 100vh;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 22px 24px 16px;
+  padding: 20px 24px 16px;
 }
 body.route-manager-pos .top { margin-bottom: 14px; flex: none; }
 body.route-manager-pos .notice { flex: none; }
@@ -819,52 +907,50 @@ body.route-manager-pos .notice { flex: none; }
    Responsive
    ========================================================================== */
 
-/* Sidebar collapses to a top bar */
-@media (max-width: 1024px) {
-  .app { grid-template-columns: 1fr; }
-  .sidebar {
-    position: sticky; top: 0; z-index: 50;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    overflow-x: auto;
-    backdrop-filter: blur(10px);
-    background: rgba(253, 248, 244, .94);
-  }
-  .brand {
-    margin: 0;
-    padding: 0 8px 0 0;
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
-    font-size: 13px;
-    flex-shrink: 0;
-  }
-  .brand img { width: 40px; height: 40px; }
-  .sidebar nav { flex-direction: row; align-items: center; flex: 1; }
-  .nav { width: auto; min-width: max-content; padding: 9px 13px; border-radius: var(--pill); }
-  .nav.logout { margin: 0; }
-  .sidebar form { margin: 0 0 0 auto; }
-  .content { padding: 22px 18px 36px; }
-
-  body.route-manager-pos .content { height: auto; overflow: visible; display: block; padding: 18px; }
-  .pos-billing { height: auto; }
-  .pos-market { overflow: visible; }
-  .market-body { overflow: visible; }
-}
-
-/* Tablet: stats / two-up collapse, POS cart drops below grid */
+/* Tablet: stats / two-up collapse */
 @media (max-width: 900px) {
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .two { grid-template-columns: 1fr; }
   .form-grid, .form-grid.two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .topnav-inner { padding: 0 18px; }
+  .content { padding: 24px 18px 40px; }
 }
 
-/* Phone: POS cart becomes a slide-up sheet */
+/* Phone: nav links collapse into a toggle panel; POS cart becomes a slide-up sheet */
 @media (max-width: 768px) {
+  /* Release the POS fixed shell — phones scroll the whole page instead. */
+  body.route-manager-pos { overflow: visible; }
+  body.route-manager-pos .app { height: auto; }
+  body.route-manager-pos .content { min-height: 0; overflow: visible; display: block; }
+  .pos-market { overflow: visible; }
+  .market-body { overflow: visible; }
+
+  .nav-toggle { display: inline-flex; }
+  .topnav-links {
+    position: fixed;
+    top: var(--nav-h);
+    left: 0; right: 0;
+    z-index: 95;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    margin: 0;
+    padding: 12px;
+    overflow: visible;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .topnav-links.open { transform: none; opacity: 1; pointer-events: auto; }
+  .topnav .nav { border-radius: var(--r-sm); padding: 12px 14px; }
+  .avatar-meta { display: none; }
+  .avatar-btn { padding: 4px; gap: 0; }
+  .avatar-btn .avatar-chevron { display: none; }
+
   .pos-storefront { grid-template-columns: 1fr; }
   .filter-panel { display: grid; grid-template-columns: 1fr auto; }
   .filter-panel select { min-width: 0; }
