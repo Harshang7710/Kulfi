@@ -58,6 +58,7 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
   const [lastEdited, setLastEdited] = useState<'cash' | 'online'>('cash');
   const [activeDraftSlot, setActiveDraftSlot] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
@@ -214,6 +215,7 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
     if (result.ok) {
       writeDrafts(readDrafts().filter((d) => d.id !== `draft-slot-${activeDraftSlot}`));
       clearBill();
+      setCartOpen(false);
       setNotice({ type: 'success', message: `Bill saved successfully (Bill #${result.billNumber})` });
       router.refresh();
     } else {
@@ -268,27 +270,30 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
             {filteredItems.map((item) => {
               const entry = cart[item.id];
               const qty = entry?.qty ?? 0;
-              const lineTotal = entry?.free ? 0 : qty * item.mrp;
               return (
                 <article
                   key={item.id}
-                  className={`item-row product-card ${item.mainFridgeQty <= item.lowStockThreshold ? 'low' : ''} ${qty > 0 ? 'selected' : ''}`}
+                  className={`product-card ${item.mainFridgeQty <= item.lowStockThreshold ? 'low' : ''} ${qty > 0 ? 'selected' : ''}`}
                 >
                   <div className="product-media">
                     {item.imageData ? (
                       <img className="item-thumb" src={item.imageData} alt={`${item.name} image`} />
                     ) : (
-                      <span>🍦</span>
+                      <span className="product-emoji" aria-hidden="true">
+                        🍦
+                      </span>
                     )}
-                  </div>
-                  <div className="product-info">
-                    <h3>{item.name}</h3>
-                    <div className="price-line">
-                      <strong>₹{money(item.mrp)}</strong>
-                      <span className="price-action">
-                        <button className="btn primary add-btn" type="button" onClick={() => step(item.id, 1)}>
+                    <div className="product-cta">
+                      {qty === 0 ? (
+                        <button
+                          className="add-btn"
+                          type="button"
+                          onClick={() => step(item.id, 1)}
+                          aria-label={`Add ${item.name}`}
+                        >
                           ADD
                         </button>
+                      ) : (
                         <span className="zepto-counter" aria-label={`${item.name} quantity`}>
                           <button type="button" onClick={() => step(item.id, -1)} aria-label={`Decrease ${item.name} quantity`}>
                             −
@@ -298,14 +303,17 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
                             +
                           </button>
                         </span>
-                      </span>
+                      )}
                     </div>
-                    <p className="stock-line">
-                      Main Fridge: <strong>{item.mainFridgeQty} pcs</strong>
-                    </p>
-                    <label className="inline-check">
+                  </div>
+                  <div className="product-info">
+                    <h3>{item.name}</h3>
+                    <div className="price-line">
+                      <strong className="price-pill">₹{money(item.mrp)}</strong>
+                      <span className="stock-line">{item.mainFridgeQty} pcs</span>
+                    </div>
+                    <label className="inline-check free-toggle">
                       <input
-                        className="free-toggle"
                         type="checkbox"
                         checked={entry?.free ?? false}
                         onChange={(e) => toggleFree(item.id, e.target.checked)}
@@ -313,15 +321,19 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
                       Complimentary
                     </label>
                   </div>
-                  <output className="line-total">₹{money(lineTotal)}</output>
                 </article>
               );
             })}
             {!filteredItems.length && <p className="empty">No active items are available.</p>}
           </div>
         </main>
-        <aside className="card payment-card pos-cart">
-          <h2>Cart</h2>
+        <aside className={`card payment-card pos-cart ${cartOpen ? 'open' : ''}`}>
+          <div className="cart-head">
+            <h2>Cart</h2>
+            <button type="button" className="cart-close" onClick={() => setCartOpen(false)} aria-label="Close cart">
+              &times;
+            </button>
+          </div>
           <div className="cart-preview">
             {lines.length ? (
               lines.map((line) => (
@@ -374,10 +386,15 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
             Remarks
             <textarea rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Global bill remarks" />
           </label>
-          <button className="primary save-bill" type="button" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Saving…' : 'Save Bill'}
+          <button className="btn primary save-bill" type="button" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Saving…' : `Save Bill · ₹${money(billTotal)}`}
           </button>
         </aside>
+        <div
+          className={`cart-backdrop ${cartOpen ? 'open' : ''}`}
+          onClick={() => setCartOpen(false)}
+          aria-hidden="true"
+        />
       </section>
       <div className="draft-dock">
         <span className="draft-label">Draft bills</span>
@@ -395,13 +412,15 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
           Clear
         </button>
       </div>
-      <div className="mobile-cart-bar">
+      <button type="button" className="mobile-cart-bar" onClick={() => setCartOpen(true)}>
         <span>
           🛒 <strong>{totalPieces} items</strong>
-          <small>Total</small>
         </span>
-        <strong>₹{money(billTotal)}</strong>
-      </div>
+        <span className="mcb-total">
+          ₹{money(billTotal)}
+          <small>View cart ›</small>
+        </span>
+      </button>
     </div>
   );
 }

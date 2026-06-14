@@ -28,11 +28,15 @@ export async function middleware(request: NextRequest) {
   const nonce = generateNonce();
   const csp = buildCsp(nonce);
 
+  const { pathname } = request.nextUrl;
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  // Exposed to the root layout so it can apply the route's body class during SSR,
+  // avoiding a post-hydration layout shift (notably the fixed-shell POS screen).
+  requestHeaders.set('x-pathname', pathname);
   requestHeaders.set('Content-Security-Policy', csp);
 
-  const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const session = token ? await verifySession(token) : null;
   const isProtectedRoute = !AUTH_ROUTES.has(pathname) && !PUBLIC_ROUTES.has(pathname);

@@ -2,21 +2,18 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-
-function routeClass(path: string) {
-  const slug = path.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
-  return `route-${slug || 'home'}`;
-}
+import { routeClass } from '@/lib/route-class';
 
 export default function RouteBodyClass() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const className = routeClass(pathname || '/');
-    document.body.classList.add(className);
-    return () => {
-      document.body.classList.remove(className);
-    };
+    const next = routeClass(pathname || '/');
+    // The server already set the initial route class on <body>; on client-side
+    // navigation, drop any stale route-* class and apply the current one.
+    const stale = Array.from(document.body.classList).filter((c) => c.startsWith('route-') && c !== next);
+    document.body.classList.remove(...stale);
+    document.body.classList.add(next);
   }, [pathname]);
 
   return null;

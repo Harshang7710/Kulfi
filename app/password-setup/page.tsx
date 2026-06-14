@@ -14,7 +14,7 @@ export default async function PasswordSetupPage({ searchParams }: { searchParams
   const { err } = await searchParams;
 
   return (
-    <div className="login-page">
+    <div className="login-page" id="main">
       <section className="login-card">
         <img className="login-logo" src="/logo.svg" alt="Desi Mastaani Matka Kulfi logo" />
         <p className="eyebrow">First login security</p>

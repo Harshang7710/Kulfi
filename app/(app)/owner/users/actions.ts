@@ -56,6 +56,19 @@ export async function toggleUserAction(userId: string) {
   const target = await users.findOne({ _id: objectId(userId) });
   if (!target) redirect('/owner/users?err=User%20not%20found');
 
+  // Deactivating an account — guard against locking everyone out of admin.
+  if (target.active) {
+    if (String(target._id) === user.id) {
+      redirect(`/owner/users?err=${encodeURIComponent('You cannot deactivate your own account')}`);
+    }
+    if (target.role === 'owner') {
+      const activeOwners = await users.countDocuments({ role: 'owner', active: true });
+      if (activeOwners <= 1) {
+        redirect(`/owner/users?err=${encodeURIComponent('At least one active owner must remain')}`);
+      }
+    }
+  }
+
   await users.updateOne({ _id: target._id }, { $set: { active: !target.active, updatedAt: new Date() } });
 
   revalidatePath('/owner/users');
