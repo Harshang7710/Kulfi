@@ -5,6 +5,16 @@ export const COOKIE_NAME = process.env.COOKIE_NAME || 'kulfi_session';
 export const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
 
 const DEV_JWT_SECRET = 'dev-only-change-this-secret';
+// Known placeholder/example values that must never be accepted as a real secret —
+// they ship in the repo (.env.example), so treating them as valid would let anyone
+// forge sessions. Reject them and fall back to a per-deployment derived key.
+const INSECURE_JWT_SECRETS = new Set([
+  DEV_JWT_SECRET,
+  'replace-with-a-long-random-secret-at-least-32-characters',
+  'change-me',
+  'changeme',
+  'secret'
+]);
 const encoder = new TextEncoder();
 
 async function derivedKey(value: string): Promise<Uint8Array> {
@@ -14,7 +24,7 @@ async function derivedKey(value: string): Promise<Uint8Array> {
 
 async function secretKey(): Promise<Uint8Array> {
   const configured = String(process.env.JWT_SECRET || '').trim();
-  if (configured && configured !== DEV_JWT_SECRET) {
+  if (configured && !INSECURE_JWT_SECRETS.has(configured)) {
     return configured.length >= 32 ? encoder.encode(configured) : derivedKey(configured);
   }
 

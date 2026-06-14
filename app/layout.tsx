@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import RouteBodyClass from '@/components/RouteBodyClass';
+import { routeClass } from '@/lib/route-class';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,11 +23,13 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Reading the CSP nonce opts this layout into per-request dynamic rendering so
   // Next.js can apply the middleware-generated nonce to its own inline scripts.
-  void (await headers()).get('x-nonce');
+  const requestHeaders = await headers();
+  void requestHeaders.get('x-nonce');
+  const initialRouteClass = routeClass(requestHeaders.get('x-pathname') || '/');
 
   return (
     <html lang="en">
-      <body>
+      <body className={initialRouteClass}>
         <RouteBodyClass />
         <a href="#main" className="skip-link">Skip to content</a>
         {children}

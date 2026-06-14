@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { err } = await searchParams;
 
   return (
-    <div className="login-page">
+    <div className="login-page" id="main">
       <section className="login-card">
         <img className="login-logo" src="/logo.svg" alt="Desi Mastaani Matka Kulfi logo" />
         <h1>Desi Mastaani Matka Kulfi</h1>
