@@ -40,7 +40,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="demo">
             <span>Seed users</span>
             <span>Owner: ID 1001 / owner@desimastaani.test / password123</span>
-            <span>Manager: ID 2001 / manager@desimastaani.test / password123</span>
           </div>
         )}
       </section>

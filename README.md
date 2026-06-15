@@ -19,10 +19,9 @@ npm run dev
 
 Open `http://localhost:3000`. The seed command only inserts demo data when the users collection is empty.
 
-Demo accounts created by the seed script:
+Demo account created by the seed script:
 
 - Owner: `owner@desimastaani.test` / `password123`
-- Manager: `manager@desimastaani.test` / `password123`
 
 Do not use these demo credentials in production. Create real users and remove or rotate the seeded accounts before launch.
 
@@ -47,7 +46,7 @@ See `.env.example` for connection timeout and application settings.
 - `npm run build` creates the production build.
 - `npm run start` starts the production server.
 - `npm run db:seed` explicitly seeds an empty database.
-- `npm run db:reset-admin` clears catalog, inventory, stock movements, and non-owner users while keeping the owner account and bill history.
+- `npm run db:reset-admin` deletes all data, including bill history, items, inventory, stock movements, and users, then recreates only the owner admin account.
 
 ## Routes
 

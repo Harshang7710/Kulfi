@@ -110,18 +110,18 @@ export async function reports(range: DateRange): Promise<ReportResult> {
     .aggregate([
       { $match: { createdAt: { $gte: range.from, $lte: range.to } } },
       { $lookup: { from: 'users', localField: 'managerId', foreignField: '_id', as: 'manager' } },
-      { $unwind: { path: '$manager', preserveNullAndEmptyArrays: true } },
+      { $unwind: '$manager' },
       { $lookup: { from: 'sale_items', localField: '_id', foreignField: 'saleId', as: 'lineItems' } },
       { $unwind: '$lineItems' },
       { $lookup: { from: 'items', localField: 'lineItems.itemId', foreignField: '_id', as: 'item' } },
-      { $unwind: { path: '$item', preserveNullAndEmptyArrays: true } },
+      { $unwind: '$item' },
       { $sort: { createdAt: -1 } }
     ])
     .toArray();
   const mapped: ReportRow[] = (rows as any[]).map((r) => ({
     id: String(r._id),
     billNumber: r.billNumber,
-    managerName: r.manager?.name || 'Deleted user',
+    managerName: r.manager.name,
     totalAmount: r.totalAmount,
     cashAmount: r.cashAmount,
     onlineAmount: r.onlineAmount,
@@ -136,8 +136,8 @@ export async function reports(range: DateRange): Promise<ReportResult> {
     isFree: r.lineItems.isFree,
     lineTotal: r.lineItems.lineTotal,
     originalSaleItemId: r.lineItems.originalSaleItemId ? String(r.lineItems.originalSaleItemId) : '',
-    itemCode: r.item?.itemCode || 'Deleted item',
-    itemName: r.item?.name || 'Deleted item'
+    itemCode: r.item.itemCode,
+    itemName: r.item.name
   }));
   const saleMap = new Map(mapped.map((r) => [r.id, r]));
   return {
