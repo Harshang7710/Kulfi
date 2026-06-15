@@ -2,7 +2,7 @@ import PageHeader from '@/components/PageHeader';
 import { itemRows } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import ImageUploadField from './ImageUploadField';
-import { addItemAction, deleteItemAction, updateItemsAction } from './actions';
+import { addItemAction, updateItemsAction } from './actions';
 
 export default async function OwnerItemsPage() {
   const rows = await itemRows(false);
@@ -25,10 +25,6 @@ export default async function OwnerItemsPage() {
           <label>
             MRP
             <input name="mrp" type="number" min={0.01} step={0.01} required />
-          </label>
-          <label>
-            Profit %
-            <input name="profitPercentage" type="number" min={0} step={0.01} placeholder="Blank until known" />
           </label>
           <label>
             Pieces/box
@@ -54,7 +50,6 @@ export default async function OwnerItemsPage() {
                   <th>ID</th>
                   <th>Name</th>
                   <th>MRP</th>
-                  <th>Profit %</th>
                   <th>Pieces/box</th>
                   <th>Low</th>
                   <th>Status</th>
@@ -92,16 +87,6 @@ export default async function OwnerItemsPage() {
                     </td>
                     <td>
                       <input
-                        name={`profitPercentage_${r.id}`}
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        defaultValue={r.profitPercentage ?? ''}
-                        aria-label={`Profit percentage for ${r.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input
                         name={`piecesPerBox_${r.id}`}
                         type="number"
                         min={1}
@@ -129,15 +114,15 @@ export default async function OwnerItemsPage() {
                       </label>
                     </td>
                     <td>
-                      <button className="btn danger" form={`delete-item-${r.id}`} type="submit">
-                        Delete
+                      <button className="btn secondary" type="submit">
+                        Edit
                       </button>
                     </td>
                   </tr>
                 ))}
                 {!rows.length && (
                   <tr>
-                    <td colSpan={9} className="empty">
+                    <td colSpan={8} className="empty">
                       No items yet.
                     </td>
                   </tr>
@@ -148,9 +133,6 @@ export default async function OwnerItemsPage() {
               <button className="primary">Save catalog changes</button>
             </p>
           </form>
-          {rows.map((r) => (
-            <form key={`delete-${r.id}`} id={`delete-item-${r.id}`} action={deleteItemAction.bind(null, r.id)} />
-          ))}
         </div>
       </article>
     </>

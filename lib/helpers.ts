@@ -56,7 +56,7 @@ export async function itemRows(activeOnly = false): Promise<ItemRow[]> {
           secondFridgeQty: { $ifNull: ['$inventory.secondFridgeQty', 0] }
         }
       },
-      { $sort: { name: 1 } }
+      { $sort: { itemCode: 1, name: 1 } }
     ])
     .toArray();
   return rows.map((r) => mapDoc(r as any)) as unknown as ItemRow[];
@@ -167,10 +167,6 @@ export async function getDashboardData(): Promise<DashboardData> {
     online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0)
   };
   const pieces = saleItemRows.reduce((a, i) => a + Number(i.quantity || 0), 0);
-  const profitValue = saleItemRows.reduce((a, si) => {
-    const item = inventory.find((i) => String(i._id) === String(si.itemId));
-    return a + (Number(si.lineTotal || 0) * Number(item?.profitPercentage || 0)) / 100;
-  }, 0);
   const main = inventory.reduce((a, i) => a + i.mainFridgeQty, 0);
   const second = inventory.reduce((a, i) => a + i.secondFridgeQty, 0);
   const low = inventory.filter((i) => i.mainFridgeQty <= i.lowStockThreshold).length;
@@ -181,7 +177,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       ['Today’s total pieces sold', pieces],
       ['Today’s cash collection total', `₹${money(summary.cash)}`],
       ['Today’s online payment total', `₹${money(summary.online)}`],
-      ['Profit value', `₹${money(profitValue)}`],
       ['Main fridge pieces total', main],
       ['Second fridge boxes total', second],
       ['Low-stock item count', low]

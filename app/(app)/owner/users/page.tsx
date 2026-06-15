@@ -1,7 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import { getCollections } from '@/lib/db';
 import { mapDoc } from '@/lib/helpers';
-import { createUserAction, deleteUserAction, toggleUserAction } from './actions';
+import { createUserAction, deleteUserAction, resetPasswordAction, toggleUserAction } from './actions';
 
 export default async function OwnerUsersPage() {
   const { users } = await getCollections();
@@ -77,6 +77,17 @@ export default async function OwnerUsersPage() {
                     <div className="actions">
                       <form action={toggleUserAction.bind(null, r.id)}>
                         <button className="btn secondary">Activate/deactivate</button>
+                      </form>
+                      <form action={resetPasswordAction.bind(null, r.id)} className="inline-reset-form">
+                        <input
+                          name="password"
+                          type="password"
+                          minLength={8}
+                          required
+                          placeholder="New password"
+                          aria-label={`New password for ${r.name}`}
+                        />
+                        <button className="btn secondary">Reset password</button>
                       </form>
                       <form action={deleteUserAction.bind(null, r.id)}>
                         <button className="btn danger">Delete</button>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
+import { Analytics } from '@vercel/analytics/next';
 import RouteBodyClass from '@/components/RouteBodyClass';
 import { routeClass } from '@/lib/route-class';
 import './globals.css';
@@ -33,6 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <RouteBodyClass />
         <a href="#main" className="skip-link">Skip to content</a>
         {children}
+        <Analytics />
       </body>
     </html>
   );

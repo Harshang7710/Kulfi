@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
-import { objectId, withTransaction } from '@/lib/db';
+import { withTransaction } from '@/lib/db';
 import { bool, itemRows } from '@/lib/helpers';
 import { itemSchema, itemUpdateSchema } from '@/lib/validation';
 import type { InventoryDoc, ItemDoc } from '@/lib/types';
@@ -25,7 +25,6 @@ export async function addItemAction(formData: FormData) {
     itemCode: formData.get('itemCode'),
     name: formData.get('name'),
     mrp: formData.get('mrp'),
-    profitPercentage: formData.get('profitPercentage'),
     piecesPerBox: formData.get('piecesPerBox'),
     lowStockThreshold: formData.get('lowStockThreshold'),
     imageData: formData.get('imageData') || ''
@@ -72,7 +71,6 @@ export async function updateItemsAction(formData: FormData) {
           itemCode: formData.get(`itemCode_${r.id}`),
           name: formData.get(`name_${r.id}`),
           mrp: formData.get(`mrp_${r.id}`),
-          profitPercentage: formData.get(`profitPercentage_${r.id}`),
           piecesPerBox: formData.get(`piecesPerBox_${r.id}`),
           lowStockThreshold: formData.get(`lowStockThreshold_${r.id}`)
         });
@@ -103,32 +101,4 @@ export async function updateItemsAction(formData: FormData) {
 
   revalidateItemPages();
   redirect('/owner/items?ok=Catalog%20changes%20saved');
-}
-
-
-export async function deleteItemAction(itemId: string) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== 'owner') redirect('/login');
-
-  try {
-    await withTransaction(async (c, session) => {
-      const _id = objectId(itemId);
-      const item = await c.items.findOne({ _id }, { session });
-      if (!item) throw new Error('Item not found');
-
-      const saleUsage = await c.saleItems.countDocuments({ itemId: _id }, { session });
-      if (saleUsage > 0) {
-        throw new Error('This item has bill history, so deactivate or hide it instead of deleting it');
-      }
-
-      await c.stockMovements.deleteMany({ itemId: _id }, { session });
-      await c.inventory.deleteMany({ itemId: _id }, { session });
-      await c.items.deleteOne({ _id }, { session });
-    });
-  } catch (e) {
-    redirect(`/owner/items?err=${encodeURIComponent((e as Error).message)}`);
-  }
-
-  revalidateItemPages();
-  redirect('/owner/items?ok=Item%20deleted');
 }
