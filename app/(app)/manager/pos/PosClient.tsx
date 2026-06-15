@@ -57,6 +57,7 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
   const [onlineAmount, setOnlineAmount] = useState('0.00');
   const [lastEdited, setLastEdited] = useState<'cash' | 'online'>('cash');
   const [activeDraftSlot, setActiveDraftSlot] = useState(1);
+  const [draftsOpen, setDraftsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -387,20 +388,40 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
           </button>
         </aside>
       </section>
-      <div className="draft-dock">
-        <span className="draft-label">Draft bills</span>
-        {DRAFT_SLOTS.map((slot) => (
-          <button
-            key={slot}
-            type="button"
-            className={`bill-tab ${slot === activeDraftSlot ? 'active' : ''}`}
-            onClick={() => handleDraftSlotClick(slot)}
-          >
-            Bill {slot}
-          </button>
-        ))}
-        <button type="button" className="draft-clear" onClick={handleDraftClear} aria-label="Clear current draft bill">
-          Clear
+      <div className={`draft-dock ${draftsOpen ? 'open' : ''}`}>
+        {draftsOpen && (
+          <div className="draft-panel" role="dialog" aria-label="Draft bills">
+            <div className="draft-panel-head">
+              <span className="draft-label">Draft bills</span>
+              <button type="button" className="draft-close" onClick={() => setDraftsOpen(false)} aria-label="Close draft bills">
+                ×
+              </button>
+            </div>
+            <div className="draft-tabs">
+              {DRAFT_SLOTS.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  className={`bill-tab ${slot === activeDraftSlot ? 'active' : ''}`}
+                  onClick={() => handleDraftSlotClick(slot)}
+                >
+                  Bill {slot}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="draft-clear" onClick={handleDraftClear} aria-label="Clear current draft bill">
+              Clear active draft
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          className="draft-fab"
+          onClick={() => setDraftsOpen((open) => !open)}
+          aria-expanded={draftsOpen}
+          aria-label="Open draft bills"
+        >
+          Draft {activeDraftSlot}
         </button>
       </div>
     </div>

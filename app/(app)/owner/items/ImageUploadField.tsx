@@ -36,11 +36,8 @@ export default function ImageUploadField() {
   return (
     <label>
       Product image (optional)
-      <input name="imageUpload" type="file" accept="image/*" onChange={handleChange} aria-describedby="image-upload-hint" />
+      <input name="imageUpload" type="file" accept="image/*" onChange={handleChange} />
       <input ref={hiddenRef} name="imageData" type="hidden" />
-      <small id="image-upload-hint" className="muted">
-        Lightweight upload: saved as a small browser-compressed image.
-      </small>
       {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : null}
     </label>
   );

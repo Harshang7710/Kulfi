@@ -9,7 +9,7 @@ import type { StockMovementDoc } from '@/lib/types';
 
 export async function recordMovementAction(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'owner') redirect('/login');
+  if (!user || user.role !== 'manager') redirect('/login');
 
   const parsed = movementSchema.safeParse({
     movementAction: formData.get('movementAction'),
@@ -18,7 +18,7 @@ export async function recordMovementAction(formData: FormData) {
     notes: formData.get('notes')
   });
   if (!parsed.success) {
-    redirect(`/owner/movements?err=${encodeURIComponent(parsed.error.issues[0]?.message || 'Invalid movement data')}`);
+    redirect(`/manager/movements?err=${encodeURIComponent(parsed.error.issues[0]?.message || 'Invalid movement data')}`);
   }
   const data = parsed.data;
 
@@ -62,13 +62,13 @@ export async function recordMovementAction(formData: FormData) {
       }
     });
   } catch (e) {
-    redirect(`/owner/movements?err=${encodeURIComponent((e as Error).message)}`);
+    redirect(`/manager/movements?err=${encodeURIComponent((e as Error).message)}`);
   }
 
-  revalidatePath('/owner/movements');
+  revalidatePath('/manager/movements');
   revalidatePath('/owner/inventory');
   revalidatePath('/owner');
   revalidatePath('/manager/pos');
   revalidatePath('/manager/stock');
-  redirect('/owner/movements?ok=Movement%20recorded%20successfully');
+  redirect('/manager/movements?ok=Movement%20recorded%20successfully');
 }

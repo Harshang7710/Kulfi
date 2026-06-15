@@ -17,7 +17,6 @@ const ownerNav: [string, string][] = [
   ['/owner/reports', 'Sales Reports'],
   ['/owner/items', 'Items'],
   ['/owner/inventory', 'Inventory'],
-  ['/owner/movements', 'Movement'],
   ['/owner/users', 'Users']
 ];
 
@@ -25,7 +24,8 @@ const managerNav: [string, string][] = [
   ['/manager', 'Home'],
   ['/manager/pos', 'POS Billing'],
   ['/manager/returns', 'Returns'],
-  ['/manager/stock', 'Available Stock']
+  ['/manager/stock', 'Available Stock'],
+  ['/manager/movements', 'Movement']
 ];
 
 function initials(name: string): string {

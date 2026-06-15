@@ -3,7 +3,7 @@ import { itemRows, MOVEMENT_TYPES, movementHistory } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import { recordMovementAction } from './actions';
 
-export default async function OwnerMovementsPage({
+export default async function ManagerMovementsPage({
   searchParams
 }: {
   searchParams: Promise<{ itemId?: string; type?: string }>;
@@ -102,7 +102,7 @@ export default async function OwnerMovementsPage({
           </label>
           <button className="btn secondary">Filter</button>
           {(query.itemId || query.type) && (
-            <a className="btn secondary" href="/owner/movements">
+            <a className="btn secondary" href="/manager/movements">
               Clear filters
             </a>
           )}

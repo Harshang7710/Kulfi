@@ -2,7 +2,7 @@ import PageHeader from '@/components/PageHeader';
 import { itemRows } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import ImageUploadField from './ImageUploadField';
-import { addItemAction, updateItemsAction } from './actions';
+import { addItemAction, deleteItemAction, updateItemsAction } from './actions';
 
 export default async function OwnerItemsPage() {
   const rows = await itemRows(false);
@@ -58,6 +58,7 @@ export default async function OwnerItemsPage() {
                   <th>Pieces/box</th>
                   <th>Low</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -127,11 +128,16 @@ export default async function OwnerItemsPage() {
                         <input type="checkbox" name={`hidden_${r.id}`} defaultChecked={r.hidden} /> Hidden
                       </label>
                     </td>
+                    <td>
+                      <button className="btn danger" form={`delete-item-${r.id}`} type="submit">
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {!rows.length && (
                   <tr>
-                    <td colSpan={8} className="empty">
+                    <td colSpan={9} className="empty">
                       No items yet.
                     </td>
                   </tr>
@@ -142,6 +148,9 @@ export default async function OwnerItemsPage() {
               <button className="primary">Save catalog changes</button>
             </p>
           </form>
+          {rows.map((r) => (
+            <form key={`delete-${r.id}`} id={`delete-item-${r.id}`} action={deleteItemAction.bind(null, r.id)} />
+          ))}
         </div>
       </article>
     </>
