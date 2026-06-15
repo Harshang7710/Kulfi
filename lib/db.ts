@@ -179,24 +179,49 @@ export async function createOnlyOwnerAdmin(): Promise<void> {
   const db = await connect();
   const c = collectionsFor(db);
   const now = new Date();
+  const email = process.env.DEFAULT_ADMIN_EMAIL || 'owner@desimastaani.test';
+  const userId = process.env.DEFAULT_ADMIN_USER_ID || '1001';
   const passwordHash = bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || 'password123', 12);
 
-  const collections = await db.listCollections({}, { nameOnly: true }).toArray();
-  await Promise.all(
-    collections.map(({ name }) => db.collection(name).deleteMany({}))
-  );
+  const owner =
+    (await c.users.findOne({ email }, { collation: { locale: 'en', strength: 2 } })) ||
+    (await c.users.findOne({ userId })) ||
+    (await c.users.findOne({ role: 'owner' }));
 
-  await c.users.insertOne({
-    name: process.env.DEFAULT_ADMIN_NAME || 'Owner Admin',
-    userId: process.env.DEFAULT_ADMIN_USER_ID || '1001',
-    email: process.env.DEFAULT_ADMIN_EMAIL || 'owner@desimastaani.test',
-    passwordHash,
-    role: 'owner',
-    mustChangePassword: false,
-    active: true,
-    createdAt: now,
-    updatedAt: now
-  } as UserDoc);
+  const ownerId = owner?._id;
+
+  if (ownerId) {
+    await c.users.updateOne(
+      { _id: ownerId },
+      {
+        $set: {
+          name: owner.name || process.env.DEFAULT_ADMIN_NAME || 'Owner Admin',
+          userId: owner.userId || userId,
+          email: owner.email || email,
+          role: 'owner',
+          active: true,
+          mustChangePassword: false,
+          updatedAt: now
+        }
+      }
+    );
+    await c.users.deleteMany({ _id: { $ne: ownerId } });
+  } else {
+    await c.users.deleteMany({});
+    await c.users.insertOne({
+      name: process.env.DEFAULT_ADMIN_NAME || 'Owner Admin',
+      userId,
+      email,
+      passwordHash,
+      role: 'owner',
+      mustChangePassword: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now
+    } as UserDoc);
+  }
+
+  await Promise.all([c.items.deleteMany({}), c.inventory.deleteMany({}), c.stockMovements.deleteMany({})]);
 }
 
 export async function seedIfEmpty(): Promise<boolean> {

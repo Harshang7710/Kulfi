@@ -47,6 +47,7 @@ See `.env.example` for connection timeout and application settings.
 - `npm run build` creates the production build.
 - `npm run start` starts the production server.
 - `npm run db:seed` explicitly seeds an empty database.
+- `npm run db:reset-admin` clears catalog, inventory, stock movements, and non-owner users while keeping the owner account and bill history.
 
 ## Routes
 

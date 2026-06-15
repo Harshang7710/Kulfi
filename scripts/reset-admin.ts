@@ -2,7 +2,7 @@ import { close, createOnlyOwnerAdmin } from '../lib/db';
 
 async function main() {
   await createOnlyOwnerAdmin();
-  console.log('MongoDB cleared. Only the owner admin account remains.');
+  console.log('MongoDB cleared. Owner account and bill history remain.');
 }
 
 main()
