@@ -126,7 +126,7 @@ export async function submitSaleAction(payload: SubmitSalePayload): Promise<Subm
       '/manager/returns',
       '/owner',
       '/owner/inventory',
-      '/owner/movements',
+      '/manager/movements',
       '/owner/reports'
     ]) {
       revalidatePath(path);

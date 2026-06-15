@@ -1,4 +1,3 @@
-import PageHeader from '@/components/PageHeader';
 import { itemRows } from '@/lib/helpers';
 import type { ItemRow } from '@/lib/types';
 import PosClient from './PosClient';
@@ -9,7 +8,6 @@ export default async function ManagerPosPage() {
 
   return (
     <>
-      <PageHeader title="POS Billing" />
       <PosClient items={items} />
     </>
   );

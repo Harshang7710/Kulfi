@@ -47,7 +47,7 @@ export async function updateInventoryAction(formData: FormData) {
   }
 
   revalidatePath('/owner/inventory');
-  revalidatePath('/owner/movements');
+  revalidatePath('/manager/movements');
   revalidatePath('/owner');
   revalidatePath('/manager/pos');
   revalidatePath('/manager/stock');
