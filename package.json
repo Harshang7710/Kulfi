@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run check:conflicts",
     "db:seed": "tsx scripts/seed.ts",
-    "check:conflicts": "node scripts/check-conflicts.js"
+    "check:conflicts": "node scripts/check-conflicts.js",
+    "db:reset-admin": "tsx scripts/reset-admin.ts",
+    "db:reset-logins": "tsx scripts/reset-admin.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

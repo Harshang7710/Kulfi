@@ -175,6 +175,47 @@ export async function close() {
   readyPromise = undefined;
 }
 
+function defaultLoginUsers(now: Date, passwordHash: string): UserDoc[] {
+  return [
+    {
+      name: process.env.DEFAULT_ADMIN_NAME || 'Owner Admin',
+      userId: process.env.DEFAULT_ADMIN_USER_ID || '1001',
+      email: process.env.DEFAULT_ADMIN_EMAIL || 'owner@desimastaani.test',
+      passwordHash,
+      role: 'owner',
+      mustChangePassword: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now
+    } as UserDoc,
+    {
+      name: process.env.DEFAULT_MANAGER_NAME || 'Cart Manager',
+      userId: process.env.DEFAULT_MANAGER_USER_ID || '2001',
+      email: process.env.DEFAULT_MANAGER_EMAIL || 'manager@desimastaani.test',
+      passwordHash: bcrypt.hashSync(process.env.DEFAULT_MANAGER_PASSWORD || process.env.DEFAULT_ADMIN_PASSWORD || 'password123', 12),
+      role: 'manager',
+      mustChangePassword: false,
+      active: true,
+      createdAt: now,
+      updatedAt: now
+    } as UserDoc
+  ];
+}
+
+export async function createOnlyDefaultLogins(): Promise<void> {
+  const db = await connect();
+  const c = collectionsFor(db);
+  const now = new Date();
+  const passwordHash = bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || 'password123', 12);
+
+  const collections = await db.listCollections({}, { nameOnly: true }).toArray();
+  await Promise.all(
+    collections.map(({ name }) => db.collection(name).deleteMany({}))
+  );
+
+  await c.users.insertMany(defaultLoginUsers(now, passwordHash));
+}
+
 export async function seedIfEmpty(): Promise<boolean> {
   const db = await connect();
   const c = collectionsFor(db);
@@ -182,106 +223,8 @@ export async function seedIfEmpty(): Promise<boolean> {
   if (userCount > 0) return false;
 
   const now = new Date();
-  const passwordHash = bcrypt.hashSync('password123', 12);
-  const ownerResult = await c.users.insertOne({
-    name: 'Owner Admin',
-    userId: '1001',
-    email: 'owner@desimastaani.test',
-    passwordHash,
-    role: 'owner',
-    mustChangePassword: false,
-    active: true,
-    createdAt: now,
-    updatedAt: now
-  } as UserDoc);
-  const managerResult = await c.users.insertOne({
-    name: 'Cart Manager',
-    userId: '2001',
-    email: 'manager@desimastaani.test',
-    passwordHash,
-    role: 'manager',
-    mustChangePassword: false,
-    active: true,
-    createdAt: now,
-    updatedAt: now
-  } as UserDoc);
+  const passwordHash = bcrypt.hashSync(process.env.DEFAULT_ADMIN_PASSWORD || 'password123', 12);
+  await c.users.insertMany(defaultLoginUsers(now, passwordHash));
 
-  const seedItems: [string, string, number, number, number, number, number, number][] = [
-    ['KULFI-MALAI', 'Malai Matka Kulfi', 60, 32, 24, 18, 75, 35],
-    ['KULFI-KESAR', 'Kesar Pista Kulfi', 70, 35, 24, 18, 52, 42],
-    ['KULFI-MANGO', 'Mango Mastaani Kulfi', 65, 30, 24, 18, 12, 60],
-    ['KULFI-CHOC', 'Chocolate Matka Kulfi', 75, 30, 24, 15, 34, 24],
-    ['KULFI-ROSE', 'Rose Badam Kulfi', 80, 38, 24, 12, 22, 18]
-  ];
-
-  for (const [itemCode, name, mrp, profitPercentage, piecesPerBox, lowStockThreshold, mainFridgeQty, secondFridgeQty] of seedItems) {
-    const item = {
-      itemCode,
-      name,
-      mrp,
-      profitPercentage,
-      piecesPerBox,
-      lowStockThreshold,
-      active: true,
-      hidden: false,
-      createdAt: now,
-      updatedAt: now
-    };
-    const itemResult = await c.items.insertOne(item as ItemDoc);
-    await c.inventory.insertOne({ itemId: itemResult.insertedId, mainFridgeQty, secondFridgeQty, createdAt: now, updatedAt: now } as InventoryDoc);
-    await c.stockMovements.insertOne({
-      itemId: itemResult.insertedId,
-      movementType: 'vendor_stock_in',
-      quantityPieces: mainFridgeQty + (secondFridgeQty * piecesPerBox),
-      quantityBoxes: secondFridgeQty,
-      sourceLocation: 'vendor',
-      destinationLocation: 'main_and_second_fridges',
-      notes: 'Opening seed stock',
-      createdBy: ownerResult.insertedId,
-      createdAt: now
-    } as StockMovementDoc);
-  }
-
-  const malai = await c.items.findOne({ itemCode: 'KULFI-MALAI' });
-  if (!malai) throw new Error('Seed item KULFI-MALAI not found after insert');
-
-  const saleResult = await c.sales.insertOne({
-    billNumber: makeBillNumber(),
-    managerId: managerResult.insertedId,
-    totalAmount: 120,
-    cashAmount: 60,
-    onlineAmount: 60,
-    remark: 'Seed sale',
-    customerName: 'Walk-in seed customer',
-    type: 'sale',
-    originalSaleId: null,
-    createdAt: now,
-    updatedAt: now
-  } as SaleDoc);
-  const saleItemResult = await c.saleItems.insertOne({
-    saleId: saleResult.insertedId,
-    itemId: malai._id,
-    quantity: 2,
-    mrp: 60,
-    isFree: false,
-    lineTotal: 120,
-    originalSaleItemId: null,
-    createdAt: now,
-    updatedAt: now
-  } as SaleItemDoc);
-  await c.inventory.updateOne({ itemId: malai._id }, { $inc: { mainFridgeQty: -2 }, $set: { updatedAt: now } });
-  await c.stockMovements.insertOne({
-    itemId: malai._id,
-    movementType: 'pos_sale',
-    quantityPieces: -2,
-    quantityBoxes: -2 / malai.piecesPerBox,
-    sourceLocation: 'main_fridge',
-    destinationLocation: 'customer',
-    notes: 'Seed POS sale',
-    saleId: saleResult.insertedId,
-    saleItemId: saleItemResult.insertedId,
-    createdBy: managerResult.insertedId,
-    createdAt: now
-  } as StockMovementDoc);
   return true;
 }
