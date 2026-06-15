@@ -92,7 +92,7 @@ export async function submitReturnAction(formData: FormData) {
   revalidatePath('/manager/pos');
   revalidatePath('/owner');
   revalidatePath('/owner/inventory');
-  revalidatePath('/owner/movements');
+  revalidatePath('/manager/movements');
   revalidatePath('/owner/reports');
   redirect('/manager/returns?ok=Return%20processed%20and%20stock%20added%20to%20Main%20Fridge');
 }

@@ -1,7 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import { getCollections } from '@/lib/db';
 import { mapDoc } from '@/lib/helpers';
-import { createUserAction, toggleUserAction } from './actions';
+import { createUserAction, deleteUserAction, toggleUserAction } from './actions';
 
 export default async function OwnerUsersPage() {
   const { users } = await getCollections();
@@ -74,9 +74,14 @@ export default async function OwnerUsersPage() {
                     <span className={`badge ${r.active ? 'ok' : 'danger'}`}>{r.active ? 'Active' : 'Inactive'}</span>
                   </td>
                   <td>
-                    <form className="actions" action={toggleUserAction.bind(null, r.id)}>
-                      <button className="btn secondary">Activate/deactivate</button>
-                    </form>
+                    <div className="actions">
+                      <form action={toggleUserAction.bind(null, r.id)}>
+                        <button className="btn secondary">Activate/deactivate</button>
+                      </form>
+                      <form action={deleteUserAction.bind(null, r.id)}>
+                        <button className="btn danger">Delete</button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}

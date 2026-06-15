@@ -1,21 +1,10 @@
 import { Suspense } from 'react';
-import { getCurrentUser } from '@/lib/auth';
 import Notice from './Notice';
 
-export default async function PageHeader({ title }: { title: string }) {
-  const user = await getCurrentUser();
-
+export default async function PageHeader({ title: _title }: { title: string }) {
   return (
-    <>
-      <header className="top">
-        <div>
-          <p className="eyebrow">{user?.role === 'owner' ? 'Owner Control Center' : 'Manager Workspace'}</p>
-          <h1>{title}</h1>
-        </div>
-      </header>
-      <Suspense fallback={null}>
-        <Notice />
-      </Suspense>
-    </>
+    <Suspense fallback={null}>
+      <Notice />
+    </Suspense>
   );
 }

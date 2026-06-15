@@ -74,3 +74,27 @@ export async function toggleUserAction(userId: string) {
   revalidatePath('/owner/users');
   redirect('/owner/users?ok=User%20updated');
 }
+
+
+export async function deleteUserAction(userId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'owner') redirect('/login');
+
+  const { users } = await getCollections();
+  const target = await users.findOne({ _id: objectId(userId) });
+  if (!target) redirect('/owner/users?err=User%20not%20found');
+  if (String(target._id) === user.id) {
+    redirect(`/owner/users?err=${encodeURIComponent('You cannot delete your own account')}`);
+  }
+  if (target.role === 'owner') {
+    const owners = await users.countDocuments({ role: 'owner' });
+    if (owners <= 1) {
+      redirect(`/owner/users?err=${encodeURIComponent('At least one owner must remain')}`);
+    }
+  }
+
+  await users.deleteOne({ _id: target._id });
+
+  revalidatePath('/owner/users');
+  redirect('/owner/users?ok=User%20deleted');
+}

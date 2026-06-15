@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
-import { withTransaction } from '@/lib/db';
+import { objectId, withTransaction } from '@/lib/db';
 import { bool, itemRows } from '@/lib/helpers';
 import { itemSchema, itemUpdateSchema } from '@/lib/validation';
 import type { InventoryDoc, ItemDoc } from '@/lib/types';
@@ -11,7 +11,7 @@ import type { InventoryDoc, ItemDoc } from '@/lib/types';
 function revalidateItemPages() {
   revalidatePath('/owner/items');
   revalidatePath('/owner/inventory');
-  revalidatePath('/owner/movements');
+  revalidatePath('/manager/movements');
   revalidatePath('/owner');
   revalidatePath('/manager/pos');
   revalidatePath('/manager/stock');
@@ -103,4 +103,32 @@ export async function updateItemsAction(formData: FormData) {
 
   revalidateItemPages();
   redirect('/owner/items?ok=Catalog%20changes%20saved');
+}
+
+
+export async function deleteItemAction(itemId: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'owner') redirect('/login');
+
+  try {
+    await withTransaction(async (c, session) => {
+      const _id = objectId(itemId);
+      const item = await c.items.findOne({ _id }, { session });
+      if (!item) throw new Error('Item not found');
+
+      const saleUsage = await c.saleItems.countDocuments({ itemId: _id }, { session });
+      if (saleUsage > 0) {
+        throw new Error('This item has bill history, so deactivate or hide it instead of deleting it');
+      }
+
+      await c.stockMovements.deleteMany({ itemId: _id }, { session });
+      await c.inventory.deleteMany({ itemId: _id }, { session });
+      await c.items.deleteOne({ _id }, { session });
+    });
+  } catch (e) {
+    redirect(`/owner/items?err=${encodeURIComponent((e as Error).message)}`);
+  }
+
+  revalidateItemPages();
+  redirect('/owner/items?ok=Item%20deleted');
 }
