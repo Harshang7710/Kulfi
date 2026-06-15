@@ -53,10 +53,11 @@ export async function itemRows(activeOnly = false): Promise<ItemRow[]> {
       {
         $addFields: {
           mainFridgeQty: { $ifNull: ['$inventory.mainFridgeQty', 0] },
-          secondFridgeQty: { $ifNull: ['$inventory.secondFridgeQty', 0] }
+          secondFridgeQty: { $ifNull: ['$inventory.secondFridgeQty', 0] },
+          numericItemCode: { $convert: { input: '$itemCode', to: 'int', onError: 0, onNull: 0 } }
         }
       },
-      { $sort: { itemCode: 1, name: 1 } }
+      { $sort: { numericItemCode: 1, name: 1 } }
     ])
     .toArray();
   return rows.map((r) => mapDoc(r as any)) as unknown as ItemRow[];

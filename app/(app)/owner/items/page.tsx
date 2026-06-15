@@ -2,7 +2,8 @@ import PageHeader from '@/components/PageHeader';
 import { itemRows } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import ImageUploadField from './ImageUploadField';
-import { addItemAction, updateItemsAction } from './actions';
+import EditableItemRow from './EditableItemRow';
+import { addItemAction, updateItemAction } from './actions';
 
 export default async function OwnerItemsPage() {
   const rows = await itemRows(false);
@@ -42,8 +43,7 @@ export default async function OwnerItemsPage() {
       <article className="card">
         <h2>Item catalog</h2>
         <div className="table-wrap">
-          <form action={updateItemsAction}>
-            <table>
+          <table>
               <thead>
                 <tr>
                   <th>Image</th>
@@ -58,67 +58,19 @@ export default async function OwnerItemsPage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.imageData ? <img className="item-thumb" src={r.imageData} alt={`${r.name} image`} /> : '—'}</td>
-                    <td>
-                      <input
-                        name={`itemCode_${r.id}`}
-                        type="number"
-                        min={1}
-                        step={1}
-                        defaultValue={r.itemCode}
-                        required
-                        aria-label={`Item ID for ${r.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input name={`name_${r.id}`} defaultValue={r.name} required aria-label={`Name for item ${r.itemCode}`} />
-                    </td>
-                    <td>
-                      <input
-                        name={`mrp_${r.id}`}
-                        type="number"
-                        min={0.01}
-                        step={0.01}
-                        defaultValue={money(r.mrp)}
-                        required
-                        aria-label={`MRP for ${r.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        name={`piecesPerBox_${r.id}`}
-                        type="number"
-                        min={1}
-                        step={1}
-                        defaultValue={r.piecesPerBox ?? ''}
-                        aria-label={`Pieces per box for ${r.name}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        name={`lowStockThreshold_${r.id}`}
-                        type="number"
-                        min={0}
-                        step={1}
-                        defaultValue={r.lowStockThreshold ?? ''}
-                        aria-label={`Low stock threshold for ${r.name}`}
-                      />
-                    </td>
-                    <td>
-                      <label className="inline-check">
-                        <input type="checkbox" name={`active_${r.id}`} defaultChecked={r.active} /> Active
-                      </label>
-                      <label className="inline-check">
-                        <input type="checkbox" name={`hidden_${r.id}`} defaultChecked={r.hidden} /> Hidden
-                      </label>
-                    </td>
-                    <td>
-                      <button className="btn secondary" type="submit">
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
+                  <EditableItemRow
+                    key={r.id}
+                    action={updateItemAction}
+                    id={r.id}
+                    itemCode={r.itemCode}
+                    name={r.name}
+                    mrp={money(r.mrp)}
+                    piecesPerBox={r.piecesPerBox ?? ''}
+                    lowStockThreshold={r.lowStockThreshold ?? ''}
+                    active={r.active}
+                    hidden={r.hidden}
+                    imageData={r.imageData}
+                  />
                 ))}
                 {!rows.length && (
                   <tr>
@@ -128,11 +80,7 @@ export default async function OwnerItemsPage() {
                   </tr>
                 )}
               </tbody>
-            </table>
-            <p className="actions">
-              <button className="primary">Save catalog changes</button>
-            </p>
-          </form>
+          </table>
         </div>
       </article>
     </>

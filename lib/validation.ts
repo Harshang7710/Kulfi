@@ -12,8 +12,8 @@ export const itemSchema = z.object({
   imageData: z.string().max(600000).optional().default('')
 });
 
-/** Per-row bulk catalog edit schema (no image field) — used by updateItemsAction */
-export const itemUpdateSchema = itemSchema.omit({ imageData: true });
+/** Single-row catalog edit schema — used by updateItemAction */
+export const itemUpdateSchema = itemSchema;
 
 /** Stock movement schema — used by recordMovementAction */
 export const movementSchema = z.object({
