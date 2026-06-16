@@ -6,14 +6,14 @@ export const itemSchema = z.object({
   itemCode: z.coerce.number().int().positive().transform(String),
   name: z.string().min(1),
   mrp: z.coerce.number().positive(),
-  profitPercentage: z.preprocess((v) => optionalNumber(v, 0), z.number().min(0)),
+  profitPercentage: z.preprocess((v) => optionalNumber(v, 0), z.number().min(0)).default(0),
   piecesPerBox: z.preprocess((v) => optionalNumber(v, 1), z.number().int().positive()),
   lowStockThreshold: z.preprocess((v) => optionalNumber(v, 0), z.number().int().min(0)),
   imageData: z.string().max(600000).optional().default('')
 });
 
-/** Per-row bulk catalog edit schema (no image field) — used by updateItemsAction */
-export const itemUpdateSchema = itemSchema.omit({ imageData: true });
+/** Single-row catalog edit schema — used by updateItemAction */
+export const itemUpdateSchema = itemSchema;
 
 /** Stock movement schema — used by recordMovementAction */
 export const movementSchema = z.object({
@@ -30,6 +30,11 @@ export const userSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email(),
   role: z.enum(['owner', 'manager']),
+  password: z.string().min(8)
+});
+
+/** Owner password reset schema — used by resetPasswordAction */
+export const resetPasswordSchema = z.object({
   password: z.string().min(8)
 });
 

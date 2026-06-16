@@ -16,6 +16,7 @@
     "db:reset-admin": "tsx scripts/reset-admin.ts"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^2.4.3",
     "csv-stringify": "^6.5.2",
     "jose": "^5.9.6",

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { getCurrentUser } from '@/lib/auth';
 import { getCollections, objectId } from '@/lib/db';
-import { userSchema } from '@/lib/validation';
+import { resetPasswordSchema, userSchema } from '@/lib/validation';
 import type { UserDoc } from '@/lib/types';
 
 export async function createUserAction(formData: FormData) {
@@ -75,6 +75,34 @@ export async function toggleUserAction(userId: string) {
   redirect('/owner/users?ok=User%20updated');
 }
 
+
+export async function resetPasswordAction(userId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'owner') redirect('/login');
+
+  const parsed = resetPasswordSchema.safeParse({ password: formData.get('password') });
+  if (!parsed.success) {
+    redirect(`/owner/users?err=${encodeURIComponent(parsed.error.issues[0]?.message || 'Invalid password')}`);
+  }
+
+  const { users } = await getCollections();
+  const target = await users.findOne({ _id: objectId(userId) });
+  if (!target) redirect('/owner/users?err=User%20not%20found');
+
+  await users.updateOne(
+    { _id: target._id },
+    {
+      $set: {
+        passwordHash: bcrypt.hashSync(parsed.data.password, 12),
+        mustChangePassword: true,
+        updatedAt: new Date()
+      }
+    }
+  );
+
+  revalidatePath('/owner/users');
+  redirect('/owner/users?ok=Password%20reset%20successfully');
+}
 
 export async function deleteUserAction(userId: string) {
   const user = await getCurrentUser();

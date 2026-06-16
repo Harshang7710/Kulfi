@@ -2,9 +2,27 @@
 
 import { useRef, useState } from 'react';
 
-export default function ImageUploadField() {
+type ImageUploadFieldProps = {
+  name?: string;
+  uploadName?: string;
+  initialSrc?: string;
+  disabled?: boolean;
+  label?: string;
+  compact?: boolean;
+  form?: string;
+};
+
+export default function ImageUploadField({
+  name = 'imageData',
+  uploadName = 'imageUpload',
+  initialSrc = '',
+  disabled = false,
+  label = 'Product image (optional)',
+  compact = false,
+  form
+}: ImageUploadFieldProps = {}) {
   const hiddenRef = useRef<HTMLInputElement>(null);
-  const [previewSrc, setPreviewSrc] = useState('');
+  const [previewSrc, setPreviewSrc] = useState(initialSrc);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -35,10 +53,10 @@ export default function ImageUploadField() {
 
   return (
     <label>
-      Product image (optional)
-      <input name="imageUpload" type="file" accept="image/*" onChange={handleChange} />
-      <input ref={hiddenRef} name="imageData" type="hidden" />
-      {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : null}
+      {!compact ? label : <span className="sr-only">{label}</span>}
+      <input name={uploadName} type="file" accept="image/*" onChange={handleChange} disabled={disabled} aria-label={label} />
+      <input ref={hiddenRef} name={name} type="hidden" defaultValue={initialSrc} form={form} />
+      {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : '—'}
     </label>
   );
 }
