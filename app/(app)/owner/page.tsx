@@ -33,8 +33,11 @@ export default async function OwnerDashboardPage() {
             ))}
           </div>
         </article>
-        <article className="card">
-          <h2>Payment mode breakdown</h2>
+        <details className="card expandable-card" open>
+          <summary>
+            <span>Payment mode breakdown</span>
+            <span className="dropdown-arrow">⌄</span>
+          </summary>
           <div className="donut">
             <div>
               Cash
@@ -47,12 +50,15 @@ export default async function OwnerDashboardPage() {
               <span>₹{money(summary.online)}</span>
             </div>
           </div>
-        </article>
+        </details>
       </section>
 
       <section className="grid two">
-        <article className="card">
-          <h2>Inventory health</h2>
+        <details className="card expandable-card" open>
+          <summary>
+            <span>Inventory health</span>
+            <span className="dropdown-arrow">⌄</span>
+          </summary>
           <div className="table-wrap">
             <table>
               <thead>
@@ -84,9 +90,12 @@ export default async function OwnerDashboardPage() {
               </tbody>
             </table>
           </div>
-        </article>
-        <article className="card">
-          <h2>Manager performance</h2>
+        </details>
+        <details className="card expandable-card" open>
+          <summary>
+            <span>Manager performance</span>
+            <span className="dropdown-arrow">⌄</span>
+          </summary>
           <div className="table-wrap">
             <table>
               <thead>
@@ -111,12 +120,15 @@ export default async function OwnerDashboardPage() {
               </tbody>
             </table>
           </div>
-        </article>
+        </details>
       </section>
 
       <section className="grid two">
-        <article className="card">
-          <h2>Top kulfi items today</h2>
+        <details className="card expandable-card" open>
+          <summary>
+            <span>Top kulfi items today</span>
+            <span className="dropdown-arrow">⌄</span>
+          </summary>
           <ul className="feed">
             {topItems.map((i) => (
               <li key={i.name}>
@@ -128,8 +140,8 @@ export default async function OwnerDashboardPage() {
             ))}
             {!topItems.length && <li className="empty">No sales yet today.</li>}
           </ul>
-        </article>
-        <details className="card movement-dropdown">
+        </details>
+        <details className="card movement-dropdown expandable-card">
           <summary>
             <span>Recent stock movement feed</span>
             <span className="dropdown-arrow">⌄</span>

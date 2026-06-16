@@ -1,7 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import { getCollections } from '@/lib/db';
 import { mapDoc } from '@/lib/helpers';
-import { createUserAction, deleteUserAction, resetPasswordAction, toggleUserAction } from './actions';
+import { createUserAction, resetPasswordAction, toggleUserAction } from './actions';
 
 export default async function OwnerUsersPage() {
   const { users } = await getCollections();
@@ -15,7 +15,7 @@ export default async function OwnerUsersPage() {
 
       <article className="card">
         <h2>Create user</h2>
-        <form action={createUserAction} className="form-grid">
+        <form action={createUserAction} className="form-grid user-create-grid">
           <label>
             Unique User ID
             <input name="userId" required placeholder="Numeric or staff code" />
@@ -74,7 +74,7 @@ export default async function OwnerUsersPage() {
                     <span className={`badge ${r.active ? 'ok' : 'danger'}`}>{r.active ? 'Active' : 'Inactive'}</span>
                   </td>
                   <td>
-                    <div className="actions">
+                    <div className="actions users-actions">
                       <form action={toggleUserAction.bind(null, r.id)}>
                         <button className="btn secondary">Activate/deactivate</button>
                       </form>
@@ -88,9 +88,6 @@ export default async function OwnerUsersPage() {
                           aria-label={`New password for ${r.name}`}
                         />
                         <button className="btn secondary">Reset password</button>
-                      </form>
-                      <form action={deleteUserAction.bind(null, r.id)}>
-                        <button className="btn danger">Delete</button>
                       </form>
                     </div>
                   </td>

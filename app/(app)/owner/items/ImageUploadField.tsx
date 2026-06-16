@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 type ImageUploadFieldProps = {
   name?: string;
@@ -21,14 +21,11 @@ export default function ImageUploadField({
   compact = false,
   form
 }: ImageUploadFieldProps = {}) {
-  const hiddenRef = useRef<HTMLInputElement>(null);
   const [previewSrc, setPreviewSrc] = useState(initialSrc);
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    const hidden = hiddenRef.current;
-    if (!file || !hidden) {
-      if (hidden) hidden.value = '';
+    if (!file) {
       setPreviewSrc('');
       return;
     }
@@ -42,9 +39,7 @@ export default function ImageUploadField({
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
         canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/webp', 0.78);
-        hidden.value = dataUrl;
-        setPreviewSrc(dataUrl);
+        setPreviewSrc(canvas.toDataURL('image/webp', 0.78));
       };
       image.src = String(reader.result);
     };
@@ -54,8 +49,8 @@ export default function ImageUploadField({
   return (
     <label>
       {!compact ? label : <span className="sr-only">{label}</span>}
-      <input name={uploadName} type="file" accept="image/*" onChange={handleChange} disabled={disabled} aria-label={label} />
-      <input ref={hiddenRef} name={name} type="hidden" defaultValue={initialSrc} form={form} />
+      <input type="file" accept="image/*" onChange={handleChange} disabled={disabled} aria-label={label} data-upload-name={uploadName} />
+      <input name={name} type="hidden" value={previewSrc} form={form} readOnly />
       {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : null}
     </label>
   );
