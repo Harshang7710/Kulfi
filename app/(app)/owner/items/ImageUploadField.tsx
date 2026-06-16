@@ -56,7 +56,7 @@ export default function ImageUploadField({
       {!compact ? label : <span className="sr-only">{label}</span>}
       <input name={uploadName} type="file" accept="image/*" onChange={handleChange} disabled={disabled} aria-label={label} />
       <input ref={hiddenRef} name={name} type="hidden" defaultValue={initialSrc} form={form} />
-      {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : '—'}
+      {previewSrc ? <img className="item-thumb" src={previewSrc} alt="Selected product preview" /> : null}
     </label>
   );
 }
