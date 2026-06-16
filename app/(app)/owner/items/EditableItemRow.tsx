@@ -31,6 +31,18 @@ export default function EditableItemRow({
   const [editing, setEditing] = useState(false);
   const formId = `edit-item-${id}`;
 
+  function startEditing(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setEditing(true);
+  }
+
+  function guardSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (!editing) {
+      event.preventDefault();
+    }
+  }
+
   return (
     <tr>
       <td>
@@ -106,7 +118,7 @@ export default function EditableItemRow({
         </label>
       </td>
       <td>
-        <form id={formId} action={action}>
+        <form id={formId} action={action} onSubmit={guardSubmit}>
           <input type="hidden" name="itemId" value={id} />
         </form>
         {editing ? (
@@ -114,7 +126,7 @@ export default function EditableItemRow({
             Save
           </button>
         ) : (
-          <button className="btn secondary" type="button" onClick={() => setEditing(true)}>
+          <button className="btn secondary" type="button" onClick={startEditing}>
             Edit
           </button>
         )}

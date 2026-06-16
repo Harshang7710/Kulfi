@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
-import { withTransaction } from '@/lib/db';
+import { getCollections } from '@/lib/db';
 import { bool, itemRows } from '@/lib/helpers';
 import { itemSchema, itemUpdateSchema } from '@/lib/validation';
 import type { InventoryDoc, ItemDoc } from '@/lib/types';
@@ -35,22 +35,21 @@ export async function addItemAction(formData: FormData) {
   const data = parsed.data;
 
   try {
-    await withTransaction(async (c, session) => {
-      const exists = await c.items.findOne(
-        { $or: [{ itemCode: data.itemCode }, { name: data.name }] },
-        { collation: { locale: 'en', strength: 2 }, session }
-      );
-      if (exists) throw new Error('Duplicate item ID or item name is not allowed');
-      const now = new Date();
-      const item = await c.items.insertOne(
-        { ...data, active: true, hidden: false, createdAt: now, updatedAt: now } as ItemDoc,
-        { session }
-      );
-      await c.inventory.insertOne(
-        { itemId: item.insertedId, mainFridgeQty: 0, secondFridgeQty: 0, createdAt: now, updatedAt: now } as InventoryDoc,
-        { session }
-      );
-    });
+    const c = await getCollections();
+    const exists = await c.items.findOne(
+      { $or: [{ itemCode: data.itemCode }, { name: data.name }] },
+      { collation: { locale: 'en', strength: 2 } }
+    );
+    if (exists) throw new Error('Duplicate item ID or item name is not allowed');
+
+    const now = new Date();
+    const item = await c.items.insertOne({ ...data, active: true, hidden: false, createdAt: now, updatedAt: now } as ItemDoc);
+    try {
+      await c.inventory.insertOne({ itemId: item.insertedId, mainFridgeQty: 0, secondFridgeQty: 0, createdAt: now, updatedAt: now } as InventoryDoc);
+    } catch (inventoryError) {
+      await c.items.deleteOne({ _id: item.insertedId });
+      throw inventoryError;
+    }
   } catch (e) {
     redirect(`/owner/items?err=${encodeURIComponent((e as Error).message)}`);
   }
@@ -79,25 +78,24 @@ export async function updateItemAction(formData: FormData) {
     if (!parsed.success) throw new Error(parsed.error.issues[0]?.message || 'Invalid item data');
     const data = parsed.data;
 
-    await withTransaction(async (c, session) => {
-      const duplicate = await c.items.findOne(
-        { _id: { $ne: row._id }, $or: [{ itemCode: data.itemCode }, { name: data.name }] },
-        { collation: { locale: 'en', strength: 2 }, session }
-      );
-      if (duplicate) throw new Error(`Duplicate item ID or name near ${data.name}`);
-      await c.items.updateOne(
-        { _id: row._id },
-        {
-          $set: {
-            ...data,
-            active: bool(formData.get(`active_${row.id}`)),
-            hidden: bool(formData.get(`hidden_${row.id}`)),
-            updatedAt: new Date()
-          }
-        },
-        { session }
-      );
-    });
+    const c = await getCollections();
+    const duplicate = await c.items.findOne(
+      { _id: { $ne: row._id }, $or: [{ itemCode: data.itemCode }, { name: data.name }] },
+      { collation: { locale: 'en', strength: 2 } }
+    );
+    if (duplicate) throw new Error(`Duplicate item ID or name near ${data.name}`);
+
+    await c.items.updateOne(
+      { _id: row._id },
+      {
+        $set: {
+          ...data,
+          active: bool(formData.get(`active_${row.id}`)),
+          hidden: bool(formData.get(`hidden_${row.id}`)),
+          updatedAt: new Date()
+        }
+      }
+    );
   } catch (e) {
     redirect(`/owner/items?err=${encodeURIComponent((e as Error).message)}`);
   }
