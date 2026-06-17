@@ -1036,3 +1036,55 @@ body.route-manager-pos .notice { flex: none; }
   .users-actions, .inline-reset-form { flex-wrap: wrap; }
   .inline-reset-form input { width: min(100%, 220px); }
 }
+
+.movement-filter-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.movement-filter-form .btn,
+.movement-filter-form button {
+  height: 42px;
+  white-space: nowrap;
+}
+
+.movement-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.movement-page-size,
+.movement-page-size form,
+.movement-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.movement-page-size select {
+  min-width: 120px;
+}
+
+.btn.disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .movement-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .movement-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
