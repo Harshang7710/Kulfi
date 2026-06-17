@@ -33,10 +33,10 @@ export default async function ManagerMovementsPage({
     <>
       <PageHeader title="Movement" />
 
-      <section className="grid two">
-        <article className="card">
+      <section className="movement-section">
+        <article className="card movement-card">
           <h2>Movement</h2>
-          <form action={recordMovementAction} className="form-grid two-col">
+          <form action={recordMovementAction} className="movement-entry-form">
             <label>
               Workflow
               <select name="movementAction">
@@ -145,9 +145,8 @@ export default async function ManagerMovementsPage({
           </table>
         </div>
         <div className="movement-pagination">
-          <div className="movement-page-size">
+          <form className="movement-page-size" method="get">
             <span>Show</span>
-            <form method="get">
               {query.itemId && <input type="hidden" name="itemId" value={query.itemId} />}
               {query.type && <input type="hidden" name="type" value={query.type} />}
               <input type="hidden" name="page" value="1" />
@@ -161,8 +160,7 @@ export default async function ManagerMovementsPage({
               <button className="btn secondary" type="submit">
                 Apply
               </button>
-            </form>
-          </div>
+          </form>
           <div className="movement-page-controls">
             <span>
               Page {safePage} of {totalPages} ({rows.length} records)

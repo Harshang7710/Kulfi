@@ -1088,3 +1088,60 @@ body.route-manager-pos .notice { flex: none; }
     flex-direction: column;
   }
 }
+
+.movement-section {
+  margin-bottom: 16px;
+}
+
+.movement-card {
+  max-width: none;
+}
+
+.movement-entry-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(220px, 1.1fr) minmax(160px, .7fr) minmax(220px, 1fr) minmax(180px, .75fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.movement-entry-form .primary {
+  height: 42px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.movement-pagination {
+  flex-wrap: nowrap;
+}
+
+.movement-page-size {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.movement-page-controls {
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .movement-entry-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .movement-entry-form {
+    grid-template-columns: 1fr;
+  }
+
+  .movement-pagination,
+  .movement-page-size,
+  .movement-page-controls {
+    flex-wrap: wrap;
+  }
+
+  .movement-page-controls {
+    margin-left: 0;
+  }
+}
