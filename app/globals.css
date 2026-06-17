@@ -1036,3 +1036,112 @@ body.route-manager-pos .notice { flex: none; }
   .users-actions, .inline-reset-form { flex-wrap: wrap; }
   .inline-reset-form input { width: min(100%, 220px); }
 }
+
+.movement-filter-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.movement-filter-form .btn,
+.movement-filter-form button {
+  height: 42px;
+  white-space: nowrap;
+}
+
+.movement-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.movement-page-size,
+.movement-page-size form,
+.movement-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.movement-page-size select {
+  min-width: 120px;
+}
+
+.btn.disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .movement-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .movement-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.movement-section {
+  margin-bottom: 16px;
+}
+
+.movement-card {
+  max-width: none;
+}
+
+.movement-entry-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(220px, 1.1fr) minmax(160px, .7fr) minmax(220px, 1fr) minmax(180px, .75fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.movement-entry-form .primary {
+  height: 42px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.movement-pagination {
+  flex-wrap: nowrap;
+}
+
+.movement-page-size {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.movement-page-controls {
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .movement-entry-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .movement-entry-form {
+    grid-template-columns: 1fr;
+  }
+
+  .movement-pagination,
+  .movement-page-size,
+  .movement-page-controls {
+    flex-wrap: wrap;
+  }
+
+  .movement-page-controls {
+    margin-left: 0;
+  }
+}

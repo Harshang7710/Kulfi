@@ -1,29 +1,42 @@
 import PageHeader from '@/components/PageHeader';
 import { itemRows, MOVEMENT_TYPES, movementHistory } from '@/lib/helpers';
+import Link from 'next/link';
 import { money } from '@/lib/db';
 import { recordMovementAction } from './actions';
 
 export default async function ManagerMovementsPage({
   searchParams
 }: {
-  searchParams: Promise<{ itemId?: string; type?: string }>;
+  searchParams: Promise<{ itemId?: string; type?: string; page?: string; pageSize?: string }>;
 }) {
   const query = await searchParams;
   const items = await itemRows(true);
+  const pageSizeOptions = [5, 10, 25, 50];
+  const requestedPageSize = Number(query.pageSize);
+  const pageSize = pageSizeOptions.includes(requestedPageSize) ? requestedPageSize : 10;
+  const requestedPage = Number(query.page);
+  const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
   const rows = await movementHistory({ itemId: query.itemId, type: query.type });
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pageHref = (page: number, size = pageSize) => {
+    const params = new URLSearchParams();
+    if (query.itemId) params.set('itemId', query.itemId);
+    if (query.type) params.set('type', query.type);
+    params.set('page', String(page));
+    params.set('pageSize', String(size));
+    return `/manager/movements?${params.toString()}`;
+  };
 
   return (
     <>
       <PageHeader title="Movement" />
 
-      <section className="grid two">
-        <article className="card">
+      <section className="movement-section">
+        <article className="card movement-card">
           <h2>Movement</h2>
-          <p className="muted">
-            Move stock between fridges, receive vendor stock into the Second Fridge, or return damaged stock back to the
-            vendor.
-          </p>
-          <form action={recordMovementAction} className="form-grid two-col">
+          <form action={recordMovementAction} className="movement-entry-form">
             <label>
               Workflow
               <select name="movementAction">
@@ -56,28 +69,11 @@ export default async function ManagerMovementsPage({
             <button className="primary">Record movement</button>
           </form>
         </article>
-        <article className="card">
-          <h2>Unit logic</h2>
-          <ul className="feed">
-            <li>
-              <span>Main Fridge</span>
-              <span>Tracked as individual pieces for retail sales.</span>
-            </li>
-            <li>
-              <span>Second Fridge</span>
-              <span>Tracked as boxes for vendor/wholesale stock.</span>
-            </li>
-            <li>
-              <span>Transfers</span>
-              <span>Entered in boxes and converted to pieces automatically.</span>
-            </li>
-          </ul>
-        </article>
       </section>
 
       <article className="card">
         <h2>Movement history</h2>
-        <form className="form-grid two-col" method="get">
+        <form className="movement-filter-form" method="get">
           <label>
             Filter by item
             <select name="itemId" defaultValue={query.itemId || ''}>
@@ -100,6 +96,8 @@ export default async function ManagerMovementsPage({
               ))}
             </select>
           </label>
+          <input type="hidden" name="page" value="1" />
+          <input type="hidden" name="pageSize" value={String(pageSize)} />
           <button className="btn secondary">Filter</button>
           {(query.itemId || query.type) && (
             <a className="btn secondary" href="/manager/movements">
@@ -123,7 +121,7 @@ export default async function ManagerMovementsPage({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {visibleRows.map((r) => (
                 <tr key={r.id}>
                   <td>{new Date(r.createdAt).toLocaleString()}</td>
                   <td>{r.item.name}</td>
@@ -136,7 +134,7 @@ export default async function ManagerMovementsPage({
                   <td>{r.notes || ''}</td>
                 </tr>
               ))}
-              {!rows.length && (
+              {!visibleRows.length && (
                 <tr>
                   <td colSpan={9} className="empty">
                     No stock movement records found.
@@ -145,6 +143,38 @@ export default async function ManagerMovementsPage({
               )}
             </tbody>
           </table>
+        </div>
+        <div className="movement-pagination">
+          <form className="movement-page-size" method="get">
+            <span>Show</span>
+              {query.itemId && <input type="hidden" name="itemId" value={query.itemId} />}
+              {query.type && <input type="hidden" name="type" value={query.type} />}
+              <input type="hidden" name="page" value="1" />
+              <select name="pageSize" defaultValue={String(pageSize)} aria-label="Rows per page">
+                {pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size} entries
+                  </option>
+                ))}
+              </select>
+              <button className="btn secondary" type="submit">
+                Apply
+              </button>
+          </form>
+          <div className="movement-page-controls">
+            <span>
+              Page {safePage} of {totalPages} ({rows.length} records)
+            </span>
+            <Link className={`btn secondary ${safePage <= 1 ? 'disabled' : ''}`} href={pageHref(Math.max(1, safePage - 1))}>
+              Previous
+            </Link>
+            <Link
+              className={`btn secondary ${safePage >= totalPages ? 'disabled' : ''}`}
+              href={pageHref(Math.min(totalPages, safePage + 1))}
+            >
+              Next
+            </Link>
+          </div>
         </div>
       </article>
     </>
