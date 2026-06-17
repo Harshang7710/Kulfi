@@ -1,6 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import { dateRange, reports } from '@/lib/helpers';
 import { money } from '@/lib/db';
+import SalesReportTable from './SalesReportTable';
 
 export default async function OwnerReportsPage({
   searchParams
@@ -51,54 +52,8 @@ export default async function OwnerReportsPage({
         </article>
       </section>
 
-      <article className="card">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Bill</th>
-                <th>Manager</th>
-                <th>Customer</th>
-                <th>Type</th>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>MRP</th>
-                <th>Free</th>
-                <th>Line</th>
-                <th>Cash</th>
-                <th>Online</th>
-                <th>Remark</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.rows.map((r) => (
-                <tr key={r.saleItemId}>
-                  <td>{new Date(r.createdAt).toLocaleString()}</td>
-                  <td>{r.billNumber}</td>
-                  <td>{r.managerName}</td>
-                  <td>{r.customerName || ''}</td>
-                  <td>{r.type}</td>
-                  <td>{r.itemName}</td>
-                  <td>{r.quantity}</td>
-                  <td>₹{money(r.mrp)}</td>
-                  <td>{r.isFree ? 'Yes' : 'No'}</td>
-                  <td>₹{money(r.lineTotal)}</td>
-                  <td>₹{money(r.cashAmount)}</td>
-                  <td>₹{money(r.onlineAmount)}</td>
-                  <td>{r.remark || ''}</td>
-                </tr>
-              ))}
-              {!report.rows.length && (
-                <tr>
-                  <td colSpan={13} className="empty">
-                    No sales in this date range.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      <article className="card sales-report-card">
+        <SalesReportTable rows={report.rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }))} />
       </article>
     </>
   );
