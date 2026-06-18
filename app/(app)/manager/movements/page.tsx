@@ -16,10 +16,10 @@ export default async function ManagerMovementsPage({
   const pageSize = pageSizeOptions.includes(requestedPageSize) ? requestedPageSize : 10;
   const requestedPage = Number(query.page);
   const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
-  const rows = await movementHistory({ itemId: query.itemId, type: query.type });
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const history = await movementHistory({ itemId: query.itemId, type: query.type, page: currentPage, limit: pageSize });
+  const totalPages = history.totalPages;
   const safePage = Math.min(currentPage, totalPages);
-  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visibleRows = history.rows;
   const pageHref = (page: number, size = pageSize) => {
     const params = new URLSearchParams();
     if (query.itemId) params.set('itemId', query.itemId);
@@ -163,7 +163,7 @@ export default async function ManagerMovementsPage({
           </form>
           <div className="movement-page-controls">
             <span>
-              Page {safePage} of {totalPages} ({rows.length} records)
+              Page {safePage} of {totalPages} ({history.totalRows} records)
             </span>
             <Link className={`btn secondary ${safePage <= 1 ? 'disabled' : ''}`} href={pageHref(Math.max(1, safePage - 1))}>
               Previous

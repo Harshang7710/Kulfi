@@ -13,7 +13,8 @@
     "check": "npm run typecheck && npm run check:conflicts",
     "db:seed": "tsx scripts/seed.ts",
     "check:conflicts": "node scripts/check-conflicts.js",
-    "db:reset-admin": "tsx scripts/reset-admin.ts"
+    "db:reset-admin": "tsx scripts/reset-admin.ts",
+    "lint": "npm run typecheck"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

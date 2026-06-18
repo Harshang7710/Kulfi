@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     from: request.nextUrl.searchParams.get('from') ?? undefined,
     to: request.nextUrl.searchParams.get('to') ?? undefined
   });
-  const report = await reports(range);
+  const report = await reports(range, { all: true });
 
   const csv = stringify(
     report.rows.map((r) => ({

@@ -65,16 +65,24 @@ export async function itemRows(activeOnly = false): Promise<ItemRow[]> {
 
 export async function todaySummary(managerId: string | ObjectId): Promise<TodaySummary> {
   const { from, to } = todayBounds();
-  const { sales, saleItems } = await getCollections();
-  const salesRows = await sales.find({ managerId: objectId(managerId), createdAt: { $gte: from, $lte: to } }).toArray();
-  const saleIds = salesRows.map((s) => s._id);
-  const items = saleIds.length ? await saleItems.find({ saleId: { $in: saleIds } }).toArray() : [];
-  return {
-    total: salesRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0),
-    cash: salesRows.reduce((a, s) => a + Number(s.cashAmount || 0), 0),
-    online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0),
-    pieces: items.reduce((a, i) => a + Number(i.quantity || 0), 0)
-  };
+  const { sales } = await getCollections();
+  const [summary] = await sales
+    .aggregate<TodaySummary>([
+      { $match: { managerId: objectId(managerId), createdAt: { $gte: from, $lte: to } } },
+      { $lookup: { from: 'sale_items', localField: '_id', foreignField: 'saleId', as: 'lineItems' } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$totalAmount' },
+          cash: { $sum: '$cashAmount' },
+          online: { $sum: '$onlineAmount' },
+          pieces: { $sum: { $sum: '$lineItems.quantity' } }
+        }
+      },
+      { $project: { _id: 0, total: 1, cash: 1, online: 1, pieces: 1 } }
+    ])
+    .toArray();
+  return summary || { total: 0, cash: 0, online: 0, pieces: 0 };
 }
 
 export async function returnableLines(managerId: string | ObjectId): Promise<ReturnableLine[]> {
@@ -105,21 +113,58 @@ export async function returnableLines(managerId: string | ObjectId): Promise<Ret
     .filter((r) => r.quantity - r.returnedQty > 0) as unknown as ReturnableLine[];
 }
 
-export async function reports(range: DateRange): Promise<ReportResult> {
+export function pagination(q: { page?: string; limit?: string; pageSize?: string }, defaultLimit = 50) {
+  const requestedLimit = Number(q.limit || q.pageSize);
+  const allowed = [10, 25, 50, 100];
+  const limit = allowed.includes(requestedLimit) ? requestedLimit : defaultLimit;
+  const requestedPage = Number(q.page);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+  return { page, limit, skip: (page - 1) * limit };
+}
+
+export async function reports(range: DateRange, opts: { page?: number; limit?: number; all?: boolean } = {}): Promise<ReportResult> {
   const { sales } = await getCollections();
-  const rows = await sales
-    .aggregate([
+  const page = Math.max(1, Math.floor(opts.page || 1));
+  const limit = Math.max(1, Math.min(5000, Math.floor(opts.limit || 50)));
+  const skip = opts.all ? 0 : (page - 1) * limit;
+  const pageStages = opts.all ? [] : [{ $skip: skip }, { $limit: limit }];
+  const [result] = await sales
+    .aggregate<any>([
       { $match: { createdAt: { $gte: range.from, $lte: range.to } } },
+      { $sort: { createdAt: -1 } },
       { $lookup: { from: 'users', localField: 'managerId', foreignField: '_id', as: 'manager' } },
       { $unwind: '$manager' },
       { $lookup: { from: 'sale_items', localField: '_id', foreignField: 'saleId', as: 'lineItems' } },
       { $unwind: '$lineItems' },
       { $lookup: { from: 'items', localField: 'lineItems.itemId', foreignField: '_id', as: 'item' } },
       { $unwind: '$item' },
-      { $sort: { createdAt: -1 } }
+      {
+        $facet: {
+          rows: pageStages,
+          rowCount: [{ $count: 'count' }],
+          lineTotals: [
+            {
+              $group: {
+                _id: null,
+                gross: { $sum: { $cond: [{ $eq: ['$type', 'sale'] }, '$lineItems.lineTotal', 0] } },
+                returns: { $sum: { $cond: [{ $eq: ['$type', 'return'] }, { $abs: '$lineItems.lineTotal' }, 0] } },
+                pieces: { $sum: '$lineItems.quantity' }
+              }
+            }
+          ]
+        }
+      }
     ])
     .toArray();
-  const mapped: ReportRow[] = (rows as any[]).map((r) => ({
+
+  const paymentTotals = await sales
+    .aggregate<any>([
+      { $match: { createdAt: { $gte: range.from, $lte: range.to } } },
+      { $group: { _id: null, cash: { $sum: '$cashAmount' }, online: { $sum: '$onlineAmount' } } }
+    ])
+    .toArray();
+
+  const mapped: ReportRow[] = ((result?.rows || []) as any[]).map((r) => ({
     id: String(r._id),
     billNumber: r.billNumber,
     managerName: r.manager.name,
@@ -140,37 +185,91 @@ export async function reports(range: DateRange): Promise<ReportResult> {
     itemCode: r.item.itemCode,
     itemName: r.item.name
   }));
-  const saleMap = new Map(mapped.map((r) => [r.id, r]));
+  const lineTotals = result?.lineTotals?.[0] || {};
+  const payments = paymentTotals[0] || {};
+  const totalRows = Number(result?.rowCount?.[0]?.count || 0);
   return {
     rows: mapped,
     totals: {
-      gross: mapped.filter((r) => r.type === 'sale').reduce((a, r) => a + Number(r.lineTotal || 0), 0),
-      returns: mapped.filter((r) => r.type === 'return').reduce((a, r) => a + Math.abs(Number(r.lineTotal || 0)), 0),
-      pieces: mapped.reduce((a, r) => a + Number(r.quantity || 0), 0),
-      cash: [...saleMap.values()].reduce((a, r) => a + Number(r.cashAmount || 0), 0),
-      online: [...saleMap.values()].reduce((a, r) => a + Number(r.onlineAmount || 0), 0)
-    }
+      gross: Number(lineTotals.gross || 0),
+      returns: Number(lineTotals.returns || 0),
+      pieces: Number(lineTotals.pieces || 0),
+      cash: Number(payments.cash || 0),
+      online: Number(payments.online || 0)
+    },
+    pagination: { page, limit, totalRows, totalPages: Math.max(1, Math.ceil(totalRows / limit)) }
   };
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
   const { from, to } = todayBounds();
+  const sevenDaysFrom = new Date(from);
+  sevenDaysFrom.setDate(sevenDaysFrom.getDate() - 6);
   const { sales, users, stockMovements } = await getCollections();
-  const salesRows = await sales.find({ createdAt: { $gte: from, $lte: to } }).toArray();
-  const saleIds = salesRows.map((s) => s._id);
-  const { saleItems } = await getCollections();
-  const saleItemRows = saleIds.length ? await saleItems.find({ saleId: { $in: saleIds } }).toArray() : [];
-  const inventory = await itemRows(true);
+
+  const [todaySales, trendRows, topItemRows, managers, inventory, movements] = await Promise.all([
+    sales
+      .aggregate<any>([
+        { $match: { createdAt: { $gte: from, $lte: to } } },
+        { $lookup: { from: 'sale_items', localField: '_id', foreignField: 'saleId', as: 'lineItems' } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$totalAmount' },
+            cash: { $sum: '$cashAmount' },
+            online: { $sum: '$onlineAmount' },
+            pieces: { $sum: { $sum: '$lineItems.quantity' } }
+          }
+        }
+      ])
+      .toArray(),
+    sales
+      .aggregate<any>([
+        { $match: { createdAt: { $gte: sevenDaysFrom, $lte: to } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, amount: { $sum: '$totalAmount' } } },
+        { $sort: { _id: 1 } }
+      ])
+      .toArray(),
+    sales
+      .aggregate<any>([
+        { $match: { createdAt: { $gte: from, $lte: to } } },
+        { $lookup: { from: 'sale_items', localField: '_id', foreignField: 'saleId', as: 'lineItems' } },
+        { $unwind: '$lineItems' },
+        { $group: { _id: '$lineItems.itemId', qty: { $sum: '$lineItems.quantity' }, amount: { $sum: '$lineItems.lineTotal' } } },
+        { $sort: { qty: -1 } },
+        { $limit: 5 },
+        { $lookup: { from: 'items', localField: '_id', foreignField: '_id', as: 'item' } },
+        { $unwind: '$item' },
+        { $project: { _id: 0, name: '$item.name', qty: 1, amount: 1 } }
+      ])
+      .toArray(),
+    users.find({ role: 'manager' }, { projection: { name: 1 } }).sort({ name: 1 }).toArray(),
+    itemRows(true),
+    stockMovements
+      .aggregate([
+        { $sort: { createdAt: -1 } },
+        { $limit: 8 },
+        { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } },
+        { $unwind: '$item' }
+      ])
+      .toArray()
+  ]);
 
   const summary = {
-    total: salesRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0),
-    cash: salesRows.reduce((a, s) => a + Number(s.cashAmount || 0), 0),
-    online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0)
+    total: Number(todaySales[0]?.total || 0),
+    cash: Number(todaySales[0]?.cash || 0),
+    online: Number(todaySales[0]?.online || 0)
   };
-  const pieces = saleItemRows.reduce((a, i) => a + Number(i.quantity || 0), 0);
-  const main = inventory.reduce((a, i) => a + i.mainFridgeQty, 0);
-  const second = inventory.reduce((a, i) => a + i.secondFridgeQty, 0);
-  const low = inventory.filter((i) => i.mainFridgeQty <= i.lowStockThreshold).length;
+  const pieces = Number(todaySales[0]?.pieces || 0);
+  const inventorySummary = inventory.reduce(
+    (acc, i) => {
+      acc.main += i.mainFridgeQty;
+      acc.second += i.secondFridgeQty;
+      if (i.mainFridgeQty <= i.lowStockThreshold) acc.low += 1;
+      return acc;
+    },
+    { main: 0, second: 0, low: 0 }
+  );
 
   const stats = (
     [
@@ -178,60 +277,33 @@ export async function getDashboardData(): Promise<DashboardData> {
       ['Today’s total pieces sold', pieces],
       ['Today’s cash collection total', `₹${money(summary.cash)}`],
       ['Today’s online payment total', `₹${money(summary.online)}`],
-      ['Main fridge pieces total', main],
-      ['Second fridge boxes total', second],
-      ['Low-stock item count', low]
+      ['Main fridge pieces total', inventorySummary.main],
+      ['Second fridge boxes total', inventorySummary.second],
+      ['Low-stock item count', inventorySummary.low]
     ] as const
   ).map(([label, value]) => ({ label, value }));
 
+  const trendByDay = new Map(trendRows.map((r) => [r._id, Number(r.amount || 0)]));
   const trend: { day: string; amount: number; heightPct: number }[] = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date();
+    const d = new Date(from);
     d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    const end = new Date(d);
-    end.setHours(23, 59, 59, 999);
-    const amountRows = await sales.find({ createdAt: { $gte: d, $lte: end } }).toArray();
-    trend.push({ day: d.toISOString().slice(0, 10), amount: amountRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0), heightPct: 0 });
+    const day = d.toISOString().slice(0, 10);
+    trend.push({ day, amount: trendByDay.get(day) || 0, heightPct: 0 });
   }
   const trendMax = Math.max(...trend.map((t) => t.amount), 1);
   trend.forEach((t) => {
     t.heightPct = Math.min(100, Math.max(5, Math.round(((t.amount / trendMax) * 100) / 5) * 5));
   });
 
-  const itemById = new Map(inventory.map((i) => [String(i._id), i]));
-  const topItems = Object.values(
-    saleItemRows.reduce<Record<string, { name: string; qty: number; amount: number }>>((acc, si) => {
-      const key = String(si.itemId);
-      const item = itemById.get(key);
-      if (!item) return acc;
-      acc[key] ||= { name: item.name, qty: 0, amount: 0 };
-      acc[key].qty += si.quantity;
-      acc[key].amount += si.lineTotal;
-      return acc;
-    }, {})
-  )
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
-
-  const managers = await users.find({ role: 'manager' }).sort({ name: 1 }).toArray();
   const managerStats = await Promise.all(managers.map(async (m) => ({ name: m.name, ...(await todaySummary(m._id)) })));
-
-  const movements = await stockMovements
-    .aggregate([
-      { $sort: { createdAt: -1 } },
-      { $limit: 8 },
-      { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } },
-      { $unwind: '$item' }
-    ])
-    .toArray();
 
   return {
     stats,
     summary,
     trend,
     inventory: inventory.filter((i) => i.mainFridgeQty <= i.lowStockThreshold),
-    topItems,
+    topItems: topItemRows as DashboardData['topItems'],
     managers: managerStats,
     movements: (movements as any[]).map((m) => ({ ...mapDoc(m), name: m.item.name })) as unknown as DashboardData['movements']
   };
@@ -245,21 +317,43 @@ export interface MovementRow extends StockMovementDoc {
   creator: { name: string };
 }
 
-export async function movementHistory(filter: { itemId?: string; type?: string }): Promise<MovementRow[]> {
+export async function movementHistory(filter: {
+  itemId?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ rows: MovementRow[]; totalRows: number; totalPages: number; page: number; limit: number }> {
   const { stockMovements } = await getCollections();
   const match: Record<string, unknown> = {};
   if (filter.type) match.movementType = filter.type;
   if (filter.itemId) match.itemId = objectId(filter.itemId);
-  const rows = await stockMovements
+  const page = Math.max(1, Math.floor(filter.page || 1));
+  const limit = Math.max(1, Math.min(100, Math.floor(filter.limit || 10)));
+  const [result] = await stockMovements
     .aggregate([
       { $match: match },
       { $sort: { createdAt: -1 } },
-      { $limit: 200 },
-      { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } },
-      { $unwind: '$item' },
-      { $lookup: { from: 'users', localField: 'createdBy', foreignField: '_id', as: 'creator' } },
-      { $unwind: '$creator' }
+      {
+        $facet: {
+          rows: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            { $lookup: { from: 'items', localField: 'itemId', foreignField: '_id', as: 'item' } },
+            { $unwind: '$item' },
+            { $lookup: { from: 'users', localField: 'createdBy', foreignField: '_id', as: 'creator' } },
+            { $unwind: '$creator' }
+          ],
+          rowCount: [{ $count: 'count' }]
+        }
+      }
     ])
     .toArray();
-  return rows.map((r) => mapDoc(r as any)) as unknown as MovementRow[];
+  const totalRows = Number((result as any)?.rowCount?.[0]?.count || 0);
+  return {
+    rows: ((result as any)?.rows || []).map((r: any) => mapDoc(r)) as unknown as MovementRow[],
+    totalRows,
+    totalPages: Math.max(1, Math.ceil(totalRows / limit)),
+    page,
+    limit
+  };
 }

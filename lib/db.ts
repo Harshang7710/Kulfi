@@ -86,12 +86,17 @@ async function ensureIndexes(db: Db) {
     db.collection('items').createIndex({ name: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } }),
     db.collection('inventory').createIndex({ itemId: 1 }, { unique: true }),
     db.collection('sales').createIndex({ billNumber: 1 }, { unique: true }),
+    db.collection('sales').createIndex({ type: 1, createdAt: -1 }),
+    db.collection('sales').createIndex({ managerId: 1, type: 1, createdAt: -1 }),
     db.collection('sales').createIndex({ managerId: 1, createdAt: -1 }),
     db.collection('sales').createIndex({ createdAt: -1 }),
     db.collection('sale_items').createIndex({ saleId: 1 }),
+    db.collection('sale_items').createIndex({ itemId: 1 }),
     db.collection('sale_items').createIndex({ originalSaleItemId: 1 }),
     db.collection('stock_movements').createIndex({ createdAt: -1 }),
-    db.collection('stock_movements').createIndex({ itemId: 1, movementType: 1 })
+    db.collection('stock_movements').createIndex({ itemId: 1, createdAt: -1 }),
+    db.collection('stock_movements').createIndex({ movementType: 1, createdAt: -1 }),
+    db.collection('stock_movements').createIndex({ itemId: 1, movementType: 1, createdAt: -1 })
   ]);
 }
 

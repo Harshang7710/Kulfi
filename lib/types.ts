@@ -181,6 +181,12 @@ export interface ReportResult {
     cash: number;
     online: number;
   };
+  pagination: {
+    page: number;
+    limit: number;
+    totalRows: number;
+    totalPages: number;
+  };
 }
 
 export interface DateRange {
