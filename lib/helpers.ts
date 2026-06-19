@@ -2,8 +2,10 @@ import type { ObjectId } from 'mongodb';
 import { getCollections, money, objectId, todayBounds } from './db';
 import type {
   DashboardData,
+  DashboardTopItem,
   DateRange,
   ItemRow,
+  ManagerToday,
   ReportResult,
   ReportRow,
   ReturnableLine,
@@ -75,6 +77,55 @@ export async function todaySummary(managerId: string | ObjectId): Promise<TodayS
     online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0),
     pieces: items.reduce((a, i) => a + Number(i.quantity || 0), 0)
   };
+}
+
+export async function managerToday(managerId: string | ObjectId): Promise<ManagerToday> {
+  const { from, to } = todayBounds();
+  const { sales, saleItems, items } = await getCollections();
+  const mId = objectId(managerId);
+
+  const salesRows = await sales.find({ managerId: mId, createdAt: { $gte: from, $lte: to } }).toArray();
+  const saleIds = salesRows.map((s) => s._id);
+  const itemRowsToday = saleIds.length ? await saleItems.find({ saleId: { $in: saleIds } }).toArray() : [];
+
+  const summary: TodaySummary = {
+    total: salesRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0),
+    cash: salesRows.reduce((a, s) => a + Number(s.cashAmount || 0), 0),
+    online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0),
+    pieces: itemRowsToday.reduce((a, i) => a + Number(i.quantity || 0), 0)
+  };
+  const billCount = salesRows.filter((s) => s.type === 'sale').length;
+
+  // Top items by net pieces sold today (positive quantity = sale, negative = return).
+  const itemIds = [...new Set(itemRowsToday.map((i) => String(i.itemId)))];
+  const itemDocs = itemIds.length ? await items.find({ _id: { $in: itemIds.map((id) => objectId(id)) } }).toArray() : [];
+  const nameById = new Map(itemDocs.map((d) => [String(d._id), d.name]));
+  const topItems: DashboardTopItem[] = Object.values(
+    itemRowsToday.reduce<Record<string, DashboardTopItem>>((acc, si) => {
+      const key = String(si.itemId);
+      acc[key] ||= { name: nameById.get(key) || 'Item', qty: 0, amount: 0 };
+      acc[key].qty += Number(si.quantity || 0);
+      acc[key].amount += Number(si.lineTotal || 0);
+      return acc;
+    }, {})
+  )
+    .filter((i) => i.qty > 0)
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5);
+
+  // Seven-day personal revenue trend for the sparkline/chart.
+  const trend: { day: string; amount: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    const end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+    const rows = await sales.find({ managerId: mId, createdAt: { $gte: d, $lte: end } }).toArray();
+    trend.push({ day: d.toISOString().slice(0, 10), amount: rows.reduce((a, s) => a + Number(s.totalAmount || 0), 0) });
+  }
+
+  return { summary, billCount, topItems, trend };
 }
 
 export async function returnableLines(managerId: string | ObjectId): Promise<ReturnableLine[]> {

@@ -441,6 +441,92 @@ button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
   margin-top: 2px;
 }
 
+/* Icon stat cards (dashboards) */
+.stat-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow .18s, transform .12s, border-color .18s;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--sc-accent, var(--brand-500));
+}
+.stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--line-strong); }
+.stat-card-icon {
+  flex-shrink: 0;
+  width: 46px; height: 46px;
+  display: grid; place-items: center;
+  border-radius: var(--r);
+  background: var(--sc-soft, var(--brand-50));
+  color: var(--sc-accent, var(--brand-600));
+}
+.stat-card-icon svg { width: 23px; height: 23px; }
+.stat-card-body { display: grid; gap: 2px; min-width: 0; }
+.stat-card-label { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.stat-card-value { font-size: 25px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); line-height: 1.15; }
+.stat-card-sub { font-size: 12px; font-weight: 600; color: var(--brand-700); }
+
+.stat-card.tone-brand   { --sc-accent: var(--brand-600); --sc-soft: var(--brand-50); }
+.stat-card.tone-gold    { --sc-accent: var(--gold-500); --sc-soft: var(--gold-200); }
+.stat-card.tone-success { --sc-accent: var(--success); --sc-soft: var(--success-bg); }
+.stat-card.tone-info    { --sc-accent: var(--info);    --sc-soft: var(--info-bg); }
+.stat-card.tone-danger  { --sc-accent: var(--danger);  --sc-soft: var(--danger-bg); }
+
+/* Manager welcome banner */
+.welcome-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  background:
+    radial-gradient(700px 200px at 0% 0%, var(--brand-50), transparent 70%),
+    var(--surface);
+}
+.welcome-banner h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 4px 0 2px; }
+.welcome-banner p { margin: 0; }
+.welcome-cta { flex-shrink: 0; }
+
+/* Quick action tiles */
+.quick-actions { display: grid; gap: 10px; }
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-soft);
+  transition: border-color .15s, background .15s, transform .12s, box-shadow .15s;
+}
+.quick-action:hover { border-color: var(--brand-300); background: var(--brand-50); transform: translateX(2px); box-shadow: var(--shadow-sm); }
+.quick-action-icon {
+  flex-shrink: 0;
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  border-radius: var(--r);
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.quick-action-icon svg { width: 21px; height: 21px; }
+.quick-action-text { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.quick-action-text strong { font-size: 14px; color: var(--ink); font-weight: 700; }
+.quick-action-text small { font-size: 12px; color: var(--muted); }
+.quick-action-arrow { color: var(--brand-400); font-size: 18px; font-weight: 700; transition: transform .15s; }
+.quick-action:hover .quick-action-arrow { transform: translateX(3px); color: var(--brand-600); }
+
 /* ---------- Tables ---------------------------------------------------------- */
 .table-wrap {
   overflow: auto;
@@ -542,34 +628,60 @@ table input, table select { min-width: 84px; }
 .movement-dropdown[open] .dropdown-arrow { transform: rotate(180deg); }
 .movement-dropdown .feed { margin-top: 12px; }
 
-/* ---------- Charts ---------------------------------------------------------- */
-.bars { display: flex; align-items: flex-end; gap: 12px; height: 190px; padding-top: 10px; }
-.bars div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; text-align: center; color: var(--muted); font-size: 11px; }
-.bars span {
-  display: block;
-  border-radius: 8px 8px 3px 3px;
-  background: linear-gradient(180deg, var(--brand-400), var(--brand-600));
-  min-height: 6px;
-}
-.donut { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.donut div {
-  border-radius: var(--r-lg);
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
-  padding: 22px;
-  text-align: center;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 13px;
-}
-.donut span { display: block; margin-top: 6px; font-size: 24px; font-weight: 700; color: var(--ink); }
+/* ---------- Charts: SVG trend (area + line) --------------------------------- */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.card-head h2 { margin: 0; }
 
-/* Bar height utility classes (driven by computed heightPct) */
-.bar-h-5{height:8px}.bar-h-10{height:14px}.bar-h-15{height:22px}.bar-h-20{height:30px}
-.bar-h-25{height:38px}.bar-h-30{height:46px}.bar-h-35{height:55px}.bar-h-40{height:63px}
-.bar-h-45{height:71px}.bar-h-50{height:79px}.bar-h-55{height:88px}.bar-h-60{height:96px}
-.bar-h-65{height:104px}.bar-h-70{height:112px}.bar-h-75{height:121px}.bar-h-80{height:129px}
-.bar-h-85{height:137px}.bar-h-90{height:145px}.bar-h-95{height:154px}.bar-h-100{height:162px}
+.trend-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.trend-stop-top { stop-color: var(--brand-400); stop-opacity: .32; }
+.trend-stop-bottom { stop-color: var(--brand-400); stop-opacity: 0; }
+.trend-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 5; }
+.trend-line { stroke: var(--brand-600); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.trend-dot { fill: var(--surface); stroke: var(--brand-600); stroke-width: 2; }
+.trend-dot.peak { fill: var(--gold-400); stroke: var(--gold-500); }
+.trend-x { fill: var(--muted); font-size: 12px; font-weight: 600; }
+.trend-peak-label { fill: var(--brand-700); font-size: 13px; font-weight: 800; }
+
+/* ---------- Charts: donut (payment split) ----------------------------------- */
+.donut-chart { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: center; }
+.donut-ring svg { width: 100%; height: auto; display: block; }
+.donut-rings { transform: rotate(-90deg); transform-origin: 50% 50%; }
+.donut-track { stroke: var(--surface-sunken); stroke-width: 18; }
+.donut-seg { stroke-width: 18; transition: stroke-dasharray .4s ease; }
+.donut-seg.seg-cash, .legend-dot.seg-cash { stroke: var(--brand-500); }
+.donut-seg.seg-online, .legend-dot.seg-online { stroke: var(--gold-400); }
+.donut-center-value { fill: var(--ink); font-size: 20px; font-weight: 800; }
+.donut-center-label { fill: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+
+.donut-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.donut-legend li { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 4px; background: currentColor; }
+.legend-dot.seg-cash { color: var(--brand-500); }
+.legend-dot.seg-online { color: var(--gold-400); }
+.legend-label { font-weight: 600; color: var(--ink-soft); }
+.legend-value { font-weight: 800; color: var(--ink); white-space: nowrap; }
+.legend-value small { font-weight: 700; color: var(--muted); margin-left: 2px; }
+
+/* ---------- Ranked lists (top sellers) -------------------------------------- */
+.rank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.rank-list li { display: grid; grid-template-columns: 26px minmax(70px, 1.4fr) minmax(60px, 2fr) auto; align-items: center; gap: 12px; }
+.rank-num {
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--brand-50); color: var(--brand-700);
+  font-size: 12px; font-weight: 800; border: 1px solid var(--brand-100);
+}
+.rank-list li:first-child .rank-num { background: var(--gold-300); color: #5a3c05; border-color: var(--gold-400); }
+.rank-name { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar { height: 8px; border-radius: var(--pill); background: var(--surface-sunken); overflow: hidden; }
+.rank-fill { display: block; height: 100%; border-radius: var(--pill); background: linear-gradient(90deg, var(--brand-400), var(--brand-600)); }
+.rank-val { font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; text-align: right; }
+
+/* Rank-fill width utilities (CSP-safe; driven by computed share) */
+.rank-fill-5{width:5%}.rank-fill-10{width:10%}.rank-fill-15{width:15%}.rank-fill-20{width:20%}
+.rank-fill-25{width:25%}.rank-fill-30{width:30%}.rank-fill-35{width:35%}.rank-fill-40{width:40%}
+.rank-fill-45{width:45%}.rank-fill-50{width:50%}.rank-fill-55{width:55%}.rank-fill-60{width:60%}
+.rank-fill-65{width:65%}.rank-fill-70{width:70%}.rank-fill-75{width:75%}.rank-fill-80{width:80%}
+.rank-fill-85{width:85%}.rank-fill-90{width:90%}.rank-fill-95{width:95%}.rank-fill-100{width:100%}
 
 /* ---------- Forms layout helpers ------------------------------------------- */
 .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: end; }
@@ -600,6 +712,49 @@ table input, table select { min-width: 84px; }
   place-items: center;
   padding: 24px;
 }
+
+/* Split-screen login: brand showcase + sign-in card */
+.login-split {
+  grid-template-columns: 1.05fr 1fr;
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
+  max-width: 1100px;
+  width: min(1100px, 100%);
+  margin: auto;
+  min-height: auto;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--line);
+}
+.login-hero {
+  position: relative;
+  display: grid;
+  align-items: center;
+  padding: 48px 44px;
+  color: #fff;
+  background:
+    radial-gradient(600px 300px at 100% 0%, rgba(255, 255, 255, .18), transparent 60%),
+    linear-gradient(150deg, var(--brand-500), var(--brand-700) 70%, var(--brand-800));
+}
+.login-hero-inner { display: grid; gap: 14px; max-width: 360px; }
+.login-hero-logo { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .25)); }
+.login-hero .eyebrow { color: var(--gold-300); }
+.login-hero-title { font-family: var(--font-display); color: #fff; font-size: clamp(24px, 3vw, 32px); line-height: 1.15; margin: 0 0 8px; }
+.login-hero-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 16px; }
+.login-hero-list li { display: flex; align-items: flex-start; gap: 12px; }
+.login-hero-check {
+  flex-shrink: 0;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .18);
+  color: #fff; font-weight: 800; font-size: 13px;
+}
+.login-hero-list strong { display: block; font-size: 14px; font-weight: 700; color: #fff; }
+.login-hero-list small { display: block; font-size: 12.5px; color: rgba(255, 255, 255, .82); margin-top: 1px; }
+
 .login-card {
   width: min(440px, 100%);
   background: var(--surface);
@@ -609,6 +764,7 @@ table input, table select { min-width: 84px; }
   box-shadow: var(--shadow-lg);
   text-align: center;
 }
+.login-split .login-card { border: 0; border-radius: 0; box-shadow: none; display: grid; align-content: center; }
 .login-logo { width: min(160px, 60%); max-height: 130px; object-fit: contain; margin-bottom: 6px; }
 .login-card h1 { font-family: var(--font-display); font-size: 26px; margin: 4px 0 2px; }
 .login-card .eyebrow { margin-bottom: 4px; }
@@ -996,6 +1152,11 @@ body.route-manager-pos .notice { flex: none; }
   .pos-market { display: block; }
   .market-body { height: auto; }
   .pos-cart { margin-top: 14px; }
+
+  /* Login collapses to the sign-in card; brand showcase is hidden. */
+  .login-split { grid-template-columns: 1fr; width: min(440px, 100%); }
+  .login-hero { display: none; }
+  .login-split .login-card { border-radius: var(--r-xl); }
 }
 
 @media (max-width: 560px) {
@@ -1005,6 +1166,15 @@ body.route-manager-pos .notice { flex: none; }
   .card { padding: 16px; border-radius: var(--r-lg); }
   .product-board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .login-card { padding: 28px 22px; }
+
+  /* New dashboard components stack / simplify on phones */
+  .donut-chart { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .donut-ring { width: 160px; }
+  .donut-legend { width: 100%; }
+  .rank-list li { grid-template-columns: 24px 1fr auto; }
+  .rank-bar { display: none; }
+  .welcome-banner { flex-direction: column; align-items: flex-start; }
+  .welcome-cta { width: 100%; }
 }
 
 .user-create-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }

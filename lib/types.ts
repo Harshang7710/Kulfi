@@ -137,6 +137,13 @@ export interface TodaySummary {
   pieces: number;
 }
 
+export interface ManagerToday {
+  summary: TodaySummary;
+  billCount: number;
+  topItems: DashboardTopItem[];
+  trend: { day: string; amount: number }[];
+}
+
 export interface ReturnableLine {
   id: string;
   saleId: string;

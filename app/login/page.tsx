@@ -13,11 +13,36 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   const { err } = await searchParams;
 
+  const highlights: [string, string][] = [
+    ['Fast POS billing', 'Multi-draft counter with instant cart and split payments'],
+    ['Live inventory', 'Two-fridge stock tracking with low-stock alerts'],
+    ['Owner reports', 'Daily sales, profit and manager performance at a glance']
+  ];
+
   return (
-    <div className="login-page" id="main">
+    <div className="login-page login-split" id="main">
+      <aside className="login-hero" aria-hidden="true">
+        <div className="login-hero-inner">
+          <img className="login-hero-logo" src="/logo.svg" alt="" />
+          <p className="eyebrow">Franchise Management Suite</p>
+          <h2 className="login-hero-title">Run your kulfi counter like a pro.</h2>
+          <ul className="login-hero-list">
+            {highlights.map(([title, desc]) => (
+              <li key={title}>
+                <span className="login-hero-check">✓</span>
+                <span>
+                  <strong>{title}</strong>
+                  <small>{desc}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
       <section className="login-card">
         <img className="login-logo" src="/logo.svg" alt="Desi Mastaani Matka Kulfi logo" />
-        <h1>Desi Mastaani Matka Kulfi</h1>
+        <h1>Welcome back</h1>
+        <p className="eyebrow">Desi Mastaani Matka Kulfi</p>
         {err && (
           <div className="notice error" role="alert">
             {err}
