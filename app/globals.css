@@ -683,6 +683,52 @@ table input, table select { min-width: 84px; }
 .rank-fill-65{width:65%}.rank-fill-70{width:70%}.rank-fill-75{width:75%}.rank-fill-80{width:80%}
 .rank-fill-85{width:85%}.rank-fill-90{width:90%}.rank-fill-95{width:95%}.rank-fill-100{width:100%}
 
+/* ---------- Toolbars, chips & date presets --------------------------------- */
+.count-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-700);
+  background: var(--brand-50);
+  border: 1px solid var(--brand-100);
+  border-radius: var(--pill);
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
+.preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: var(--pill);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.preset-chip:hover { border-color: var(--brand-300); background: var(--brand-50); color: var(--brand-700); }
+.preset-chip.active { background: var(--brand-gradient); color: #fff; border-color: transparent; box-shadow: var(--shadow-sm); }
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.table-search { flex: 1; min-width: 220px; height: 44px; }
+.toolbar-select { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
+.toolbar-select select { height: 44px; min-width: 150px; }
+.result-count {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 /* ---------- Forms layout helpers ------------------------------------------- */
 .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: end; }
 .form-grid.two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }

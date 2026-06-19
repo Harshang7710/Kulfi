@@ -44,7 +44,12 @@ export default async function OwnerUsersPage() {
       </article>
 
       <article className="card">
-        <h2>Users</h2>
+        <div className="card-head">
+          <h2>Users</h2>
+          <span className="count-chip">
+            {rows.length} total · {rows.filter((r) => r.active).length} active
+          </span>
+        </div>
         <div className="table-wrap">
           <table>
             <thead>

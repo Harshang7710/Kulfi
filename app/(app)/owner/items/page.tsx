@@ -41,7 +41,10 @@ export default async function OwnerItemsPage() {
       </article>
 
       <article className="card">
-        <h2>Item catalog</h2>
+        <div className="card-head">
+          <h2>Item catalog</h2>
+          <span className="count-chip">{rows.length} {rows.length === 1 ? 'item' : 'items'}</span>
+        </div>
         <div className="table-wrap">
           <table>
               <thead>
