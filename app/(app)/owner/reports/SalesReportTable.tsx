@@ -52,9 +52,25 @@ function groupRowsByBill(rows: SalesReportRow[]): BillGroup[] {
   return [...billMap.values()];
 }
 
+type TypeFilter = 'all' | 'sale' | 'return';
+
 export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
-  const billGroups = useMemo(() => groupRowsByBill(rows), [rows]);
+  const allBillGroups = useMemo(() => groupRowsByBill(rows), [rows]);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [expandedBills, setExpandedBills] = useState<Set<string>>(new Set());
+
+  const billGroups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allBillGroups.filter((bill) => {
+      const matchesType = typeFilter === 'all' || bill.type === typeFilter;
+      const matchesSearch =
+        !q ||
+        `${bill.billNumber} ${bill.managerName} ${bill.customerName}`.toLowerCase().includes(q) ||
+        bill.rows.some((r) => r.itemName.toLowerCase().includes(q));
+      return matchesType && matchesSearch;
+    });
+  }, [allBillGroups, search, typeFilter]);
 
   const toggleBill = (billNumber: string) => {
     setExpandedBills((current) => {
@@ -70,6 +86,28 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
 
   return (
     <div className="table-wrap sales-report-wrap">
+      <div className="table-toolbar">
+        <label className="pos-search table-search">
+          <span aria-hidden="true">🔎</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search bill number, manager, customer, or item"
+            aria-label="Search sales report"
+          />
+        </label>
+        <label className="toolbar-select">
+          Type
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}>
+            <option value="all">All</option>
+            <option value="sale">Sale</option>
+            <option value="return">Return</option>
+          </select>
+        </label>
+        <span className="result-count">
+          {billGroups.length} of {allBillGroups.length} bills
+        </span>
+      </div>
       <table className="sales-report-table">
         <thead>
           <tr>
@@ -150,7 +188,7 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
           <tbody>
             <tr>
               <td colSpan={11} className="empty">
-                No sales in this date range.
+                {allBillGroups.length ? 'No bills match your search.' : 'No sales in this date range.'}
               </td>
             </tr>
           </tbody>
