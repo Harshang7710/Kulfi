@@ -8,7 +8,7 @@ import { loginSchema } from '@/lib/validation';
 
 export async function loginAction(formData: FormData) {
   const ip = (await headers()).get('x-forwarded-for') || 'unknown';
-  if (!checkLoginRateLimit(ip)) {
+  if (!(await checkLoginRateLimit(ip))) {
     redirect(`/login?err=${encodeURIComponent('Too many login attempts. Please wait a few minutes and try again.')}`);
   }
 

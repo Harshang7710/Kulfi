@@ -91,7 +91,10 @@ async function ensureIndexes(db: Db) {
     db.collection('sale_items').createIndex({ saleId: 1 }),
     db.collection('sale_items').createIndex({ originalSaleItemId: 1 }),
     db.collection('stock_movements').createIndex({ createdAt: -1 }),
-    db.collection('stock_movements').createIndex({ itemId: 1, movementType: 1 })
+    db.collection('stock_movements').createIndex({ itemId: 1, movementType: 1 }),
+    // TTL slightly longer than lib/security.ts's rate-limit window so a doc is never
+    // reaped mid-window; MongoDB's TTL monitor runs every ~60s, not instantly.
+    db.collection('login_attempts').createIndex({ createdAt: 1 }, { expireAfterSeconds: 20 * 60 })
   ]);
 }
 

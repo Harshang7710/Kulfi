@@ -1,16 +1,31 @@
+import { getDb } from './db';
+
 const LOGIN_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_RATE_LIMIT_MAX = 20;
-const loginAttempts = new Map<string, number[]>();
+
+interface LoginAttemptDoc {
+  key: string;
+  createdAt: Date;
+}
 
 /**
- * Per-instance sliding-window limiter. Production deployments should replace this
- * with a shared store when traffic spans multiple serverless instances.
+ * Sliding-window limiter backed by MongoDB so the limit is shared across every
+ * serverless instance (an in-memory Map only protects whichever instance handled
+ * the request). Fails open on DB errors — a flaky rate-limit store should degrade
+ * brute-force protection, not take down login entirely.
  */
-export function checkLoginRateLimit(key: string): boolean {
-  const now = Date.now();
-  const windowStart = now - LOGIN_RATE_LIMIT_WINDOW_MS;
-  const recent = (loginAttempts.get(key) || []).filter((timestamp) => timestamp > windowStart);
-  recent.push(now);
-  loginAttempts.set(key, recent);
-  return recent.length <= LOGIN_RATE_LIMIT_MAX;
+export async function checkLoginRateLimit(key: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    const attempts = db.collection<LoginAttemptDoc>('login_attempts');
+    const windowStart = new Date(Date.now() - LOGIN_RATE_LIMIT_WINDOW_MS);
+
+    await attempts.insertOne({ key, createdAt: new Date() });
+    const recentCount = await attempts.countDocuments({ key, createdAt: { $gt: windowStart } });
+
+    return recentCount <= LOGIN_RATE_LIMIT_MAX;
+  } catch (error) {
+    console.error('[security] Login rate limit check failed, failing open', error);
+    return true;
+  }
 }
