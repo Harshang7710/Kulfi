@@ -28,10 +28,14 @@ export function stockDisplay(row: { mainFridgeQty: number; secondFridgeQty: numb
   };
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export function dateRange(q: { from?: string; to?: string }): DateRange {
   const today = new Date().toISOString().slice(0, 10);
-  const fromDate = q.from || today;
-  const toDate = q.to || today;
+  // Validate format: these strings flow into a Mongo query and, on the CSV export
+  // route, into a Content-Disposition response header — never trust them as-is.
+  const fromDate = q.from && ISO_DATE_RE.test(q.from) ? q.from : today;
+  const toDate = q.to && ISO_DATE_RE.test(q.to) ? q.to : today;
   return {
     fromDate,
     toDate,
