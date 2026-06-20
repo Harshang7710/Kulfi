@@ -99,7 +99,11 @@ export async function connect(): Promise<Db> {
   if (database) return database;
   const c = await getClient();
   database = c.db(mongoDbName());
-  await ensureIndexes(database);
+  // Don't block the request on index creation — every serverless cold start would
+  // otherwise pay for a dozen createIndex round-trips before serving its first query.
+  // Indexes are idempotent and only need to exist eventually; `npm run db:seed`
+  // already creates them synchronously for first-time setup.
+  ensureIndexes(database).catch((error) => console.error('[db] ensureIndexes failed', error));
   return database;
 }
 

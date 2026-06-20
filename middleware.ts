@@ -9,9 +9,17 @@ function generateNonce(): string {
 }
 
 function buildCsp(nonce: string): string {
+  // Next.js dev mode wraps modules with eval()-based devtools; blocking eval there
+  // (no 'unsafe-eval') breaks client hydration entirely, which silently falls back
+  // to native form submits and crashes Server Actions. Production bundles never use
+  // eval, so this relaxation is dev-only.
+  const scriptSrc =
+    process.env.NODE_ENV === 'production'
+      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self'",
     "img-src 'self' data:",
     "form-action 'self'",
