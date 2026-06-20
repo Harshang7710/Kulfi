@@ -79,6 +79,29 @@ export async function todaySummary(managerId: string | ObjectId): Promise<TodayS
   };
 }
 
+/**
+ * Buckets a week of sales into 7 daily totals from a single fetched range instead
+ * of one query per day. `fetchRange` should run one query covering [from, to].
+ */
+async function weeklyTrend(
+  fetchRange: (from: Date, to: Date) => Promise<{ createdAt: Date; totalAmount: number }[]>
+): Promise<{ day: string; amount: number }[]> {
+  const days: { day: string; start: Date; end: Date }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    const end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+    days.push({ day: d.toISOString().slice(0, 10), start: d, end });
+  }
+  const rows = await fetchRange(days[0].start, days[days.length - 1].end);
+  return days.map(({ day, start, end }) => ({
+    day,
+    amount: rows.reduce((a, r) => (r.createdAt >= start && r.createdAt <= end ? a + Number(r.totalAmount || 0) : a), 0)
+  }));
+}
+
 export async function managerToday(managerId: string | ObjectId): Promise<ManagerToday> {
   const { from, to } = todayBounds();
   const { sales, saleItems, items } = await getCollections();
@@ -113,17 +136,9 @@ export async function managerToday(managerId: string | ObjectId): Promise<Manage
     .sort((a, b) => b.qty - a.qty)
     .slice(0, 5);
 
-  // Seven-day personal revenue trend for the sparkline/chart.
-  const trend: { day: string; amount: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    const end = new Date(d);
-    end.setHours(23, 59, 59, 999);
-    const rows = await sales.find({ managerId: mId, createdAt: { $gte: d, $lte: end } }).toArray();
-    trend.push({ day: d.toISOString().slice(0, 10), amount: rows.reduce((a, s) => a + Number(s.totalAmount || 0), 0) });
-  }
+  // Seven-day personal revenue trend for the sparkline/chart. One query for the
+  // whole week (bucketed in JS) instead of 7 sequential round trips per day.
+  const trend = await weeklyTrend((from, to) => sales.find({ managerId: mId, createdAt: { $gte: from, $lte: to } }).toArray());
 
   return { summary, billCount, topItems, trend };
 }
@@ -235,16 +250,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     ] as const
   ).map(([label, value]) => ({ label, value }));
 
-  const trend: { day: string; amount: number; heightPct: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    const end = new Date(d);
-    end.setHours(23, 59, 59, 999);
-    const amountRows = await sales.find({ createdAt: { $gte: d, $lte: end } }).toArray();
-    trend.push({ day: d.toISOString().slice(0, 10), amount: amountRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0), heightPct: 0 });
-  }
+  const trend: { day: string; amount: number; heightPct: number }[] = (
+    await weeklyTrend((from, to) => sales.find({ createdAt: { $gte: from, $lte: to } }).toArray())
+  ).map((t) => ({ ...t, heightPct: 0 }));
   const trendMax = Math.max(...trend.map((t) => t.amount), 1);
   trend.forEach((t) => {
     t.heightPct = Math.min(100, Math.max(5, Math.round(((t.amount / trendMax) * 100) / 5) * 5));
