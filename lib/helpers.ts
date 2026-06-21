@@ -300,7 +300,17 @@ export async function getDashboardData(): Promise<DashboardData> {
   };
 }
 
-export const MOVEMENT_TYPES = ['stock_adjustment', 'transfer_second_to_main', 'vendor_stock_in', 'vendor_return', 'pos_sale', 'return_movement'] as const;
+/** Compares the last two points of a trend series (today vs. yesterday). */
+export function dayOverDayChange(trend: { amount: number }[]): { pct: number; up: boolean } | null {
+  if (trend.length < 2) return null;
+  const today = trend[trend.length - 1].amount;
+  const yesterday = trend[trend.length - 2].amount;
+  if (yesterday <= 0) return null;
+  const pct = Math.round(((today - yesterday) / yesterday) * 100);
+  return { pct: Math.min(999, Math.abs(pct)), up: pct >= 0 };
+}
+
+export const MOVEMENT_TYPES =['stock_adjustment', 'transfer_second_to_main', 'vendor_stock_in', 'vendor_return', 'pos_sale', 'return_movement'] as const;
 
 export interface MovementRow extends StockMovementDoc {
   id: string;

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import CountUp from './CountUp';
 
 export type StatTone = 'brand' | 'gold' | 'success' | 'info' | 'danger';
 export type StatIcon =
@@ -69,7 +70,9 @@ export default function StatCard({
       </span>
       <span className="stat-card-body">
         <span className="stat-card-label">{label}</span>
-        <span className="stat-card-value">{value}</span>
+        <span className="stat-card-value">
+          <CountUp value={value} />
+        </span>
         {sub != null && <span className="stat-card-sub">{sub}</span>}
       </span>
     </article>

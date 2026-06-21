@@ -6,7 +6,7 @@ import TrendChart from '@/components/TrendChart';
 import Donut from '@/components/Donut';
 import { getCurrentUser } from '@/lib/auth';
 import { money } from '@/lib/format';
-import { managerToday } from '@/lib/helpers';
+import { dayOverDayChange, managerToday } from '@/lib/helpers';
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -44,6 +44,7 @@ export default async function ManagerHomePage() {
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   const avgBill = billCount > 0 ? summary.total / billCount : 0;
   const topQty = Math.max(...topItems.map((t) => t.qty), 1);
+  const change = dayOverDayChange(trend);
 
   return (
     <>
@@ -63,7 +64,22 @@ export default async function ManagerHomePage() {
       </section>
 
       <section className="grid stats">
-        <StatCard icon="rupee" tone="brand" label="Today’s sales" value={`₹${money(summary.total)}`} sub={`${billCount} ${billCount === 1 ? 'bill' : 'bills'}`} />
+        <StatCard
+          icon="rupee"
+          tone="brand"
+          label="Today’s sales"
+          value={`₹${money(summary.total)}`}
+          sub={
+            <>
+              {`${billCount} ${billCount === 1 ? 'bill' : 'bills'}`}
+              {change && (
+                <span className={`trend-badge ${change.up ? 'up' : 'down'}`}>
+                  {change.up ? '▲' : '▼'} {change.pct}% vs yesterday
+                </span>
+              )}
+            </>
+          }
+        />
         <StatCard icon="pieces" tone="gold" label="Pieces sold" value={summary.pieces} />
         <StatCard icon="cash" tone="success" label="Cash collected" value={`₹${money(summary.cash)}`} />
         <StatCard icon="online" tone="info" label="Online collected" value={`₹${money(summary.online)}`} />

@@ -2,7 +2,7 @@ import PageHeader from '@/components/PageHeader';
 import StatCard, { type StatIcon, type StatTone } from '@/components/StatCard';
 import TrendChart from '@/components/TrendChart';
 import Donut from '@/components/Donut';
-import { getDashboardData } from '@/lib/helpers';
+import { dayOverDayChange, getDashboardData } from '@/lib/helpers';
 import { money } from '@/lib/db';
 
 // Parallel to the fixed order of stats returned by getDashboardData().
@@ -20,6 +20,7 @@ const STAT_META: { icon: StatIcon; tone: StatTone }[] = [
 export default async function OwnerDashboardPage() {
   const { stats, summary, trend, inventory, topItems, managers, movements } = await getDashboardData();
   const topQty = Math.max(...topItems.map((i) => i.qty), 1);
+  const change = dayOverDayChange(trend);
 
   return (
     <>
@@ -27,7 +28,20 @@ export default async function OwnerDashboardPage() {
 
       <section className="grid stats">
         {stats.map((s, i) => (
-          <StatCard key={s.label} icon={STAT_META[i]?.icon ?? 'rupee'} tone={STAT_META[i]?.tone ?? 'brand'} label={s.label} value={s.value} />
+          <StatCard
+            key={s.label}
+            icon={STAT_META[i]?.icon ?? 'rupee'}
+            tone={STAT_META[i]?.tone ?? 'brand'}
+            label={s.label}
+            value={s.value}
+            sub={
+              i === 0 && change ? (
+                <span className={`trend-badge ${change.up ? 'up' : 'down'}`}>
+                  {change.up ? '▲' : '▼'} {change.pct}% vs yesterday
+                </span>
+              ) : undefined
+            }
+          />
         ))}
       </section>
 
