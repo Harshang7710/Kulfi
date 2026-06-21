@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import SubmitButton from '@/components/SubmitButton';
 import { getCurrentUser } from '@/lib/auth';
 import { money } from '@/lib/format';
 import { returnableLines } from '@/lib/helpers';
@@ -51,7 +52,9 @@ export default async function ManagerReturnsPage() {
                           required
                           aria-label={`Return quantity for ${r.name} from bill ${r.billNumber}`}
                         />
-                        <button className="btn secondary">Process return</button>
+                        <SubmitButton className="btn secondary" pendingText="Processing…">
+                          Process return
+                        </SubmitButton>
                       </form>
                     </td>
                   </tr>

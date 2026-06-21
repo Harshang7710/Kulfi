@@ -1,5 +1,6 @@
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
+import SubmitButton from '@/components/SubmitButton';
 import { itemRows } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import { updateInventoryAction } from './actions';
@@ -81,7 +82,7 @@ export default async function OwnerInventoryPage() {
               </tbody>
             </table>
             <p>
-              <button className="primary">Save stock balances</button>
+              <SubmitButton pendingText="Saving…">Save stock balances</SubmitButton>
             </p>
           </form>
         </div>

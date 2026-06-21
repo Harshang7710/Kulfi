@@ -383,7 +383,8 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
             Remarks
             <textarea rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="Global bill remarks" />
           </label>
-          <button className="btn primary save-bill" type="button" onClick={handleSubmit} disabled={submitting}>
+          <button className="btn primary save-bill" type="button" onClick={handleSubmit} disabled={submitting} aria-busy={submitting}>
+            {submitting && <span className="btn-spinner" aria-hidden="true" />}
             {submitting ? 'Saving…' : `Save Bill · ₹${money(billTotal)}`}
           </button>
         </aside>

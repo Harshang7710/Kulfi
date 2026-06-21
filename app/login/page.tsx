@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
+import SubmitButton from '@/components/SubmitButton';
 import { loginAction } from './actions';
 
 export const metadata: Metadata = {
@@ -57,9 +58,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             Password
             <input name="password" type="password" required placeholder="••••••••" />
           </label>
-          <button className="btn primary" type="submit">
-            Login
-          </button>
+          <SubmitButton pendingText="Logging in…">Login</SubmitButton>
         </form>
         {process.env.NODE_ENV !== 'production' && (
           <div className="demo">

@@ -174,6 +174,19 @@ button, .btn {
 button:active, .btn:active { transform: translateY(1px); }
 button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
 
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin .6s linear infinite;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
 .btn.primary, button.primary, .primary {
   background: var(--brand-gradient);
   color: #fff;

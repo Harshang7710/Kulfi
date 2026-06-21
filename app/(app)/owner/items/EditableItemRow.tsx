@@ -29,6 +29,7 @@ export default function EditableItemRow({
   action
 }: EditableItemRowProps) {
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const formId = `edit-item-${id}`;
 
   function startEditing(event: React.MouseEvent<HTMLButtonElement>) {
@@ -40,7 +41,13 @@ export default function EditableItemRow({
   function guardSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (!editing) {
       event.preventDefault();
+      return;
     }
+    // useFormStatus won't see this form's pending state since the Save button lives
+    // outside the <form> JSX tree (wired via the `form` attribute so inputs can sit
+    // in table cells) — track it manually instead. The row unmounts/resets on the
+    // server-action redirect either way, so there's no "stuck" state to clear.
+    setSaving(true);
   }
 
   return (
@@ -122,8 +129,9 @@ export default function EditableItemRow({
           <input type="hidden" name="itemId" value={id} />
         </form>
         {editing ? (
-          <button className="btn secondary" type="submit" form={formId}>
-            Save
+          <button className="btn secondary" type="submit" form={formId} disabled={saving} aria-busy={saving}>
+            {saving && <span className="btn-spinner" aria-hidden="true" />}
+            {saving ? 'Saving…' : 'Save'}
           </button>
         ) : (
           <button className="btn secondary" type="button" onClick={startEditing}>

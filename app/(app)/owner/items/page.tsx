@@ -1,4 +1,5 @@
 import PageHeader from '@/components/PageHeader';
+import SubmitButton from '@/components/SubmitButton';
 import { itemRows } from '@/lib/helpers';
 import { money } from '@/lib/db';
 import ImageUploadField from './ImageUploadField';
@@ -36,7 +37,7 @@ export default async function OwnerItemsPage() {
             <input name="lowStockThreshold" type="number" min={0} step={1} placeholder="Blank" />
           </label>
           <ImageUploadField />
-          <button className="primary">Add item</button>
+          <SubmitButton pendingText="Adding…">Add item</SubmitButton>
         </form>
       </article>
 

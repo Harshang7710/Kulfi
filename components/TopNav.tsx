@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { Role } from '@/lib/types';
+import SubmitButton from './SubmitButton';
 
 interface NavUser {
   name: string;
@@ -176,9 +177,9 @@ export default function TopNav({ user, logoutAction }: { user: NavUser; logoutAc
                 Cancel
               </button>
               <form action={logoutAction}>
-                <button type="submit" className="btn danger">
+                <SubmitButton className="btn danger" pendingText="Logging out…">
                   Log out
-                </button>
+                </SubmitButton>
               </form>
             </div>
           </div>

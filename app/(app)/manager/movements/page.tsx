@@ -1,4 +1,5 @@
 import PageHeader from '@/components/PageHeader';
+import SubmitButton from '@/components/SubmitButton';
 import { itemRows, MOVEMENT_TYPES, movementHistory } from '@/lib/helpers';
 import Link from 'next/link';
 import { money } from '@/lib/db';
@@ -66,7 +67,7 @@ export default async function ManagerMovementsPage({
               Notes
               <input name="notes" placeholder="Invoice, reason, or damage details" />
             </label>
-            <button className="primary">Record movement</button>
+            <SubmitButton pendingText="Recording…">Record movement</SubmitButton>
           </form>
         </article>
       </section>

@@ -1,4 +1,5 @@
 import PageHeader from '@/components/PageHeader';
+import SubmitButton from '@/components/SubmitButton';
 import { getCollections } from '@/lib/db';
 import { mapDoc } from '@/lib/helpers';
 import { createUserAction, resetPasswordAction, toggleUserAction } from './actions';
@@ -39,7 +40,7 @@ export default async function OwnerUsersPage() {
             Temporary password
             <input name="password" type="password" minLength={8} required />
           </label>
-          <button className="primary">Create user</button>
+          <SubmitButton pendingText="Creating…">Create user</SubmitButton>
         </form>
       </article>
 
@@ -81,7 +82,9 @@ export default async function OwnerUsersPage() {
                   <td>
                     <div className="actions users-actions">
                       <form action={toggleUserAction.bind(null, r.id)}>
-                        <button className="btn secondary">Activate/deactivate</button>
+                        <SubmitButton className="btn secondary" pendingText="Updating…">
+                          Activate/deactivate
+                        </SubmitButton>
                       </form>
                       <form action={resetPasswordAction.bind(null, r.id)} className="inline-reset-form">
                         <input
@@ -92,7 +95,9 @@ export default async function OwnerUsersPage() {
                           placeholder="New password"
                           aria-label={`New password for ${r.name}`}
                         />
-                        <button className="btn secondary">Reset password</button>
+                        <SubmitButton className="btn secondary" pendingText="Resetting…">
+                          Reset password
+                        </SubmitButton>
                       </form>
                     </div>
                   </td>
