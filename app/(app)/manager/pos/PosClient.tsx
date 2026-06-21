@@ -28,6 +28,16 @@ interface CartLine {
   lineTotal: number;
 }
 
+interface Receipt {
+  billNumber: string;
+  createdAt: string;
+  customerName: string;
+  lines: CartLine[];
+  cashAmount: number;
+  onlineAmount: number;
+  total: number;
+}
+
 const DRAFT_KEY = 'kulfi-pos-drafts-v1';
 const DRAFT_SLOTS = [1, 2, 3, 4, 5];
 
@@ -45,7 +55,7 @@ function writeDrafts(drafts: PosDraft[]) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
 }
 
-export default function PosClient({ items }: { items: ItemRow[] }) {
+export default function PosClient({ items, managerName }: { items: ItemRow[]; managerName: string }) {
   const router = useRouter();
 
   const [cart, setCart] = useState<Cart>({});
@@ -60,6 +70,7 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
   const [draftsOpen, setDraftsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [lastReceipt, setLastReceipt] = useState<Receipt | null>(null);
 
   const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
@@ -213,6 +224,15 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
     });
     setSubmitting(false);
     if (result.ok) {
+      setLastReceipt({
+        billNumber: result.billNumber,
+        createdAt: new Date().toISOString(),
+        customerName,
+        lines,
+        cashAmount: Number(cashAmount || 0),
+        onlineAmount: Number(onlineAmount || 0),
+        total: billTotal
+      });
       writeDrafts(readDrafts().filter((d) => d.id !== `draft-slot-${activeDraftSlot}`));
       clearBill();
       setNotice({ type: 'success', message: `Bill saved successfully (Bill #${result.billNumber})` });
@@ -227,9 +247,55 @@ export default function PosClient({ items }: { items: ItemRow[] }) {
       {notice && (
         <div className={`notice ${notice.type}`} role="alert">
           <span>{notice.message}</span>
+          {notice.type === 'success' && lastReceipt && (
+            <button type="button" className="btn secondary notice-action" onClick={() => window.print()}>
+              Print Receipt
+            </button>
+          )}
           <button type="button" className="notice-close" aria-label="Dismiss notification" onClick={() => setNotice(null)}>
             &times;
           </button>
+        </div>
+      )}
+      {lastReceipt && (
+        <div id="receipt-print" className="receipt-print">
+          <div className="receipt-header">
+            <strong>Desi Mastaani Matka Kulfi</strong>
+            <span>Bill #{lastReceipt.billNumber}</span>
+            <span>{new Date(lastReceipt.createdAt).toLocaleString()}</span>
+            {managerName && <span>Served by {managerName}</span>}
+            {lastReceipt.customerName && <span>Customer: {lastReceipt.customerName}</span>}
+          </div>
+          <table className="receipt-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lastReceipt.lines.map((line) => (
+                <tr key={line.itemId}>
+                  <td>
+                    {line.item.name}
+                    {line.free ? ' (Free)' : ''}
+                  </td>
+                  <td>{line.qty}</td>
+                  <td>₹{money(line.lineTotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="receipt-total">
+            <strong>Total</strong>
+            <strong>₹{money(lastReceipt.total)}</strong>
+          </div>
+          <div className="receipt-split">
+            {lastReceipt.cashAmount > 0 && <span>Cash: ₹{money(lastReceipt.cashAmount)}</span>}
+            {lastReceipt.onlineAmount > 0 && <span>Online: ₹{money(lastReceipt.onlineAmount)}</span>}
+          </div>
+          <p className="receipt-thanks">Thank you for visiting!</p>
         </div>
       )}
       <header className="pos-storefront">

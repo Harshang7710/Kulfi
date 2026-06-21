@@ -187,6 +187,22 @@ button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
   to { transform: rotate(360deg); }
 }
 
+/* ---------- Route loading state (Next.js loading.tsx files) ---------------- */
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+.page-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--brand-200);
+  border-top-color: var(--brand-600);
+  border-radius: 50%;
+  animation: btn-spin .7s linear infinite;
+}
+
 .btn.primary, button.primary, .primary {
   background: var(--brand-gradient);
   color: #fff;
@@ -609,6 +625,7 @@ table input, table select { min-width: 84px; }
   font-size: 20px; line-height: 1; padding: 0 4px; flex-shrink: 0;
 }
 .notice-close:hover { opacity: .7; transform: none; box-shadow: none; }
+.notice-action { flex-shrink: 0; padding: 7px 14px; font-size: 13px; margin-left: auto; }
 
 /* ---------- Lists / feeds --------------------------------------------------- */
 .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
@@ -855,6 +872,29 @@ table input, table select { min-width: 84px; }
 }
 .error-page p { color: var(--muted); }
 .error-page .btn { justify-self: center; margin-top: 6px; }
+
+/* ---------- POS receipt (screen-hidden, print-only) ------------------------- */
+.receipt-print { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .receipt-print, .receipt-print * { visibility: visible; }
+  .receipt-print {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px;
+    color: #000;
+  }
+}
+.receipt-header { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; text-align: center; }
+.receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.receipt-table th, .receipt-table td { text-align: left; padding: 5px 0; border-bottom: 1px dashed #999; font-size: 13px; }
+.receipt-table th:last-child, .receipt-table td:last-child { text-align: right; }
+.receipt-total { display: flex; justify-content: space-between; font-size: 16px; padding-top: 8px; border-top: 2px solid #000; }
+.receipt-split { display: flex; justify-content: space-between; font-size: 13px; margin-top: 6px; color: #444; }
+.receipt-thanks { text-align: center; margin-top: 18px; font-style: italic; color: #444; }
 
 /* =============================================================================
    POS — fixed shell, only the product grid scrolls. Blinkit-style cards.
