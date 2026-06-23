@@ -1563,3 +1563,81 @@ body.route-manager-pos .notice { flex: none; }
     text-transform: uppercase;
   }
 }
+
+/* Password visibility affordance */
+.password-field {
+  position: relative;
+  display: block;
+}
+.password-field input { padding-right: 52px; }
+.password-field .password-toggle,
+.stack .password-field .password-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 40px;
+  height: calc(100% - 8px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  z-index: 1;
+}
+.password-field .password-toggle:hover,
+.stack .password-field .password-toggle:hover {
+  background: var(--surface-soft);
+  transform: none;
+}
+
+/* Single-column analytic cards used when payment split cards are removed. */
+.grid.one { grid-template-columns: 1fr; }
+
+/* Align stock and report filters cleanly with their search fields. */
+.table-toolbar { display: grid; grid-template-columns: minmax(260px, 1fr) auto auto; align-items: end; }
+.table-toolbar .result-count { margin-left: 0; align-self: center; }
+
+/* Move POS draft launcher to the bottom-left corner. */
+.draft-dock {
+  left: 22px;
+  right: auto;
+  align-items: flex-start;
+}
+
+/* Compact receipt printing: prevents browser-created blank trailing pages. */
+@page { size: 80mm auto; margin: 0; }
+@media print {
+  html, body {
+    width: 80mm;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+  }
+  .receipt-print {
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 80mm;
+    max-width: 80mm;
+    padding: 6mm;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .receipt-print table,
+  .receipt-print tr,
+  .receipt-print td,
+  .receipt-print th,
+  .receipt-total,
+  .receipt-split,
+  .receipt-thanks { break-inside: avoid; page-break-inside: avoid; }
+}
+
+@media (max-width: 768px) {
+  .table-toolbar { grid-template-columns: 1fr; }
+  .draft-dock { left: 14px; bottom: 14px; }
+}

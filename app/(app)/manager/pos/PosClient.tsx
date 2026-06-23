@@ -61,7 +61,6 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
   const [cart, setCart] = useState<Cart>({});
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'in' | 'low'>('all');
-  const [customerName, setCustomerName] = useState('');
   const [remark, setRemark] = useState('');
   const [cashAmount, setCashAmount] = useState('0.00');
   const [onlineAmount, setOnlineAmount] = useState('0.00');
@@ -105,7 +104,6 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
 
   function applyDraft(draft: PosDraft) {
     setCart(draft.cart);
-    setCustomerName(draft.customerName);
     setRemark(draft.remark);
     setCashAmount(draft.cashAmount);
     setOnlineAmount(draft.onlineAmount);
@@ -115,7 +113,6 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
 
   function clearBill() {
     setCart({});
-    setCustomerName('');
     setRemark('');
     setCashAmount('0.00');
     setOnlineAmount('0.00');
@@ -125,11 +122,11 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
   function captureDraft(slot: number): PosDraft {
     return {
       id: `draft-slot-${slot}`,
-      name: customerName.trim() || `Draft ${slot}`,
+      name: `Draft ${slot}`,
       updatedAt: new Date().toISOString(),
       lastEdited,
       cart,
-      customerName,
+      customerName: '',
       remark,
       cashAmount,
       onlineAmount
@@ -206,8 +203,10 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
     return items.filter((item) => {
       const haystack = `${item.name} ${item.itemCode || ''}`.toLowerCase();
       const matchesSearch = !query || haystack.includes(query);
-      const status = item.mainFridgeQty > 0 ? 'in' : 'low';
-      const matchesStock = stockFilter === 'all' || status === stockFilter;
+      const matchesStock =
+        stockFilter === 'all' ||
+        (stockFilter === 'in' && item.mainFridgeQty > item.lowStockThreshold) ||
+        (stockFilter === 'low' && item.mainFridgeQty <= item.lowStockThreshold);
       return matchesSearch && matchesStock;
     });
   }, [items, search, stockFilter]);
@@ -219,7 +218,7 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
       lines: lines.map((line) => ({ itemId: line.itemId, qty: line.qty, free: line.free })),
       cashAmount: Number(cashAmount || 0),
       onlineAmount: Number(onlineAmount || 0),
-      customerName,
+      customerName: '',
       remark
     });
     setSubmitting(false);
@@ -227,7 +226,7 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
       setLastReceipt({
         billNumber: result.billNumber,
         createdAt: new Date().toISOString(),
-        customerName,
+        customerName: '',
         lines,
         cashAmount: Number(cashAmount || 0),
         onlineAmount: Number(onlineAmount || 0),
@@ -264,7 +263,6 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
             <span>Bill #{lastReceipt.billNumber}</span>
             <span>{new Date(lastReceipt.createdAt).toLocaleString()}</span>
             {managerName && <span>Served by {managerName}</span>}
-            {lastReceipt.customerName && <span>Customer: {lastReceipt.customerName}</span>}
           </div>
           <table className="receipt-table">
             <thead>
@@ -423,10 +421,6 @@ export default function PosClient({ items, managerName }: { items: ItemRow[]; ma
             <strong>Total</strong>
             <strong>₹{money(billTotal)}</strong>
           </div>
-          <label>
-            Customer Name
-            <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" />
-          </label>
           <div className="payment-split">
             <label>
               Cash

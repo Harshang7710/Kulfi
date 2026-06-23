@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import TrendChart from '@/components/TrendChart';
-import Donut from '@/components/Donut';
 import { getCurrentUser } from '@/lib/auth';
 import { money } from '@/lib/format';
 import { dayOverDayChange, managerToday } from '@/lib/helpers';
@@ -85,24 +84,13 @@ export default async function ManagerHomePage() {
         <StatCard icon="online" tone="info" label="Online collected" value={`₹${money(summary.online)}`} />
       </section>
 
-      <section className="grid two">
+      <section className="grid one">
         <article className="card">
           <div className="card-head">
             <h2>Your 7-day sales</h2>
             <span className="badge ok">Avg bill ₹{money(avgBill)}</span>
           </div>
           <TrendChart points={trend} />
-        </article>
-        <article className="card">
-          <h2>Today’s payment split</h2>
-          <Donut
-            segments={[
-              { label: 'Cash', value: summary.cash, className: 'seg-cash' },
-              { label: 'Online', value: summary.online, className: 'seg-online' }
-            ]}
-            centerLabel="collected"
-            centerValue={`₹${money(summary.total)}`}
-          />
         </article>
       </section>
 

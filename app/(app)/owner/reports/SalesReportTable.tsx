@@ -11,7 +11,6 @@ interface BillGroup {
   rows: SalesReportRow[];
   createdAt: string;
   managerName: string;
-  customerName: string;
   type: string;
   remark: string;
   cashAmount: number;
@@ -39,7 +38,6 @@ function groupRowsByBill(rows: SalesReportRow[]): BillGroup[] {
       rows: [row],
       createdAt: row.createdAt,
       managerName: row.managerName,
-      customerName: row.customerName || '',
       type: row.type,
       remark: row.remark || '',
       cashAmount: Number(row.cashAmount || 0),
@@ -66,7 +64,7 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
       const matchesType = typeFilter === 'all' || bill.type === typeFilter;
       const matchesSearch =
         !q ||
-        `${bill.billNumber} ${bill.managerName} ${bill.customerName}`.toLowerCase().includes(q) ||
+        `${bill.billNumber} ${bill.managerName}`.toLowerCase().includes(q) ||
         bill.rows.some((r) => r.itemName.toLowerCase().includes(q));
       return matchesType && matchesSearch;
     });
@@ -92,7 +90,7 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search bill number, manager, customer, or item"
+            placeholder="Search bill number, manager, or item"
             aria-label="Search sales report"
           />
         </label>
@@ -115,7 +113,6 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
             <th>Date</th>
             <th>Bill Number</th>
             <th>Manager</th>
-            <th>Customer</th>
             <th>Type</th>
             <th>Total Qty</th>
             <th>Total Price</th>
@@ -146,7 +143,6 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
                 <td data-label="Date">{new Date(bill.createdAt).toLocaleString()}</td>
                 <td data-label="Bill Number" className="bill-number-cell">{bill.billNumber}</td>
                 <td data-label="Manager">{bill.managerName}</td>
-                <td data-label="Customer">{bill.customerName}</td>
                 <td data-label="Type"><span className="report-type-pill">{bill.type}</span></td>
                 <td data-label="Total Qty" className="numeric-cell">{bill.totalQty}</td>
                 <td data-label="Total Price" className="numeric-cell">₹{money(bill.totalPrice)}</td>
@@ -156,7 +152,7 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
               </tr>
               {isExpanded && (
                 <tr id={detailsId} className="bill-detail-row">
-                  <td colSpan={11}>
+                  <td colSpan={10}>
                     <div className="bill-items-panel">
                       <div className="bill-items-title">Item details</div>
                       <div className="bill-items-grid" role="table" aria-label={`Items in bill ${bill.billNumber}`}>
@@ -187,7 +183,7 @@ export default function SalesReportTable({ rows }: { rows: SalesReportRow[] }) {
         {!billGroups.length && (
           <tbody>
             <tr>
-              <td colSpan={11} className="empty">
+              <td colSpan={10} className="empty">
                 {allBillGroups.length ? 'No bills match your search.' : 'No sales in this date range.'}
               </td>
             </tr>

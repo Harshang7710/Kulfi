@@ -1,7 +1,6 @@
 import PageHeader from '@/components/PageHeader';
 import StatCard, { type StatIcon, type StatTone } from '@/components/StatCard';
 import TrendChart from '@/components/TrendChart';
-import Donut from '@/components/Donut';
 import { dayOverDayChange, getDashboardData } from '@/lib/helpers';
 import { money } from '@/lib/db';
 
@@ -45,7 +44,7 @@ export default async function OwnerDashboardPage() {
         ))}
       </section>
 
-      <section className="grid two">
+      <section className="grid one">
         <article className="card">
           <div className="card-head">
             <h2>Seven-day revenue trend</h2>
@@ -53,20 +52,6 @@ export default async function OwnerDashboardPage() {
           </div>
           <TrendChart points={trend} />
         </article>
-        <details className="card expandable-card" open>
-          <summary>
-            <span>Payment mode breakdown</span>
-            <span className="dropdown-arrow">⌄</span>
-          </summary>
-          <Donut
-            segments={[
-              { label: 'Cash', value: summary.cash, className: 'seg-cash' },
-              { label: 'Online', value: summary.online, className: 'seg-online' }
-            ]}
-            centerLabel="today"
-            centerValue={`₹${money(summary.total)}`}
-          />
-        </details>
       </section>
 
       <section className="grid two">

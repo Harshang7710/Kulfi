@@ -1,5 +1,6 @@
 import PageHeader from '@/components/PageHeader';
 import SubmitButton from '@/components/SubmitButton';
+import PasswordField from '@/components/PasswordField';
 import { getCollections } from '@/lib/db';
 import { mapDoc } from '@/lib/helpers';
 import { createUserAction, resetPasswordAction, toggleUserAction } from './actions';
@@ -38,7 +39,7 @@ export default async function OwnerUsersPage() {
           </label>
           <label>
             Temporary password
-            <input name="password" type="password" minLength={8} required />
+            <PasswordField name="password" minLength={8} required />
           </label>
           <SubmitButton pendingText="Creating…">Create user</SubmitButton>
         </form>
@@ -87,9 +88,8 @@ export default async function OwnerUsersPage() {
                         </SubmitButton>
                       </form>
                       <form action={resetPasswordAction.bind(null, r.id)} className="inline-reset-form">
-                        <input
+                        <PasswordField
                           name="password"
-                          type="password"
                           minLength={8}
                           required
                           placeholder="New password"

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import SubmitButton from '@/components/SubmitButton';
+import PasswordField from '@/components/PasswordField';
 import { loginAction } from './actions';
 
 export const metadata: Metadata = {
@@ -56,7 +57,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </label>
           <label>
             Password
-            <input name="password" type="password" required placeholder="••••••••" />
+            <PasswordField name="password" required placeholder="••••••••" />
           </label>
           <SubmitButton pendingText="Logging in…">Login</SubmitButton>
         </form>
