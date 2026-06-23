@@ -1569,21 +1569,29 @@ body.route-manager-pos .notice { flex: none; }
   position: relative;
   display: block;
 }
-.password-field input { padding-right: 48px; }
-.password-toggle {
+.password-field input { padding-right: 52px; }
+.password-field .password-toggle,
+.stack .password-field .password-toggle {
   position: absolute;
-  top: 50%;
-  right: 8px;
-  width: 34px;
-  height: 34px;
+  top: 4px;
+  right: 4px;
+  width: 40px;
+  height: calc(100% - 8px);
+  min-width: 0;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: var(--pill);
+  border-radius: var(--r-sm);
   background: transparent;
   box-shadow: none;
-  transform: translateY(-50%);
+  transform: none;
+  z-index: 1;
 }
-.password-toggle:hover { background: var(--surface-soft); transform: translateY(-50%); }
+.password-field .password-toggle:hover,
+.stack .password-field .password-toggle:hover {
+  background: var(--surface-soft);
+  transform: none;
+}
 
 /* Single-column analytic cards used when payment split cards are removed. */
 .grid.one { grid-template-columns: 1fr; }
