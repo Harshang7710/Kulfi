@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCurrentUser } from '@/lib/auth';
 import SubmitButton from '@/components/SubmitButton';
+import PasswordField from '@/components/PasswordField';
 import { passwordSetupAction } from './actions';
 
 export const metadata: Metadata = {
@@ -29,11 +30,11 @@ export default async function PasswordSetupPage({ searchParams }: { searchParams
         <form action={passwordSetupAction} className="stack">
           <label>
             New password
-            <input name="password" type="password" minLength={8} required placeholder="At least 8 characters" />
+            <PasswordField name="password" minLength={8} required placeholder="At least 8 characters" />
           </label>
           <label>
             Confirm password
-            <input name="confirmPassword" type="password" minLength={8} required placeholder="Repeat new password" />
+            <PasswordField name="confirmPassword" minLength={8} required placeholder="Repeat new password" />
           </label>
           <SubmitButton pendingText="Saving…">Save password</SubmitButton>
         </form>
