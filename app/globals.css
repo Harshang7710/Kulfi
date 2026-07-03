@@ -869,7 +869,10 @@ table input, table select { min-width: 84px; }
   box-shadow: var(--shadow-lg);
   text-align: center;
 }
-.login-split .login-card { border: 0; border-radius: 0; box-shadow: none; display: grid; align-content: center; }
+.login-split .login-card { border: 0; border-radius: 0; box-shadow: none; display: grid; align-content: center; justify-items: center; width: 100%; }
+.login-split .login-card .notice,
+.login-split .login-card .stack,
+.login-split .login-card .demo { width: min(440px, 100%); }
 .login-logo { width: min(160px, 60%); max-height: 130px; object-fit: contain; margin-bottom: 6px; }
 .login-card h1 { font-family: var(--font-display); font-size: 26px; margin: 4px 0 2px; }
 .login-card .eyebrow { margin-bottom: 4px; }
