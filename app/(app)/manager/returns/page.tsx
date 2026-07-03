@@ -16,9 +16,17 @@ export default async function ManagerReturnsPage() {
     <>
       <PageHeader title="POS Returns" />
 
-      <article className="card">
-        <div className="table-wrap">
-          <table>
+      <article className="card returns-card">
+        <div className="returns-summary">
+          <div>
+            <p className="eyebrow">Today</p>
+            <h2>Returns counter</h2>
+            <p className="muted">Enter only the quantity that came back. Eligible lines are grouped from your current-day bills.</p>
+          </div>
+          <span className="badge warn">{rows.length} returnable lines</span>
+        </div>
+        <div className="table-wrap returns-table-wrap">
+          <table className="returns-table">
             <thead>
               <tr>
                 <th>Bill</th>
@@ -35,14 +43,14 @@ export default async function ManagerReturnsPage() {
                 const remaining = r.quantity - r.returnedQty;
                 return (
                   <tr key={r.id}>
-                    <td>{r.billNumber}</td>
-                    <td>{r.name}</td>
-                    <td>{r.quantity}</td>
-                    <td>{r.returnedQty}</td>
-                    <td>{remaining}</td>
-                    <td>₹{r.isFree ? '0.00' : money(r.mrp)}</td>
+                    <td><strong className="bill-chip">{r.billNumber}</strong></td>
+                    <td><span className="return-item-name">{r.name}</span>{r.itemCode && <small className="return-item-code">#{r.itemCode}</small>}</td>
+                    <td><span className="qty-pill">{r.quantity}</span></td>
+                    <td><span className="qty-pill muted-pill">{r.returnedQty}</span></td>
+                    <td><span className="qty-pill ok-pill">{remaining}</span></td>
+                    <td><strong>₹{r.isFree ? '0.00' : money(r.mrp)}</strong></td>
                     <td>
-                      <form className="actions" action={submitReturnAction}>
+                      <form className="actions return-form" action={submitReturnAction}>
                         <input type="hidden" name="saleItemId" value={r.id} />
                         <input
                           name="quantity"
@@ -50,6 +58,7 @@ export default async function ManagerReturnsPage() {
                           min={1}
                           max={remaining}
                           required
+                          placeholder="Qty"
                           aria-label={`Return quantity for ${r.name} from bill ${r.billNumber}`}
                         />
                         <SubmitButton className="btn secondary" pendingText="Processing…">

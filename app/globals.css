@@ -819,6 +819,7 @@ table input, table select { min-width: 84px; }
 
 /* Split-screen login: brand showcase + sign-in card */
 .login-split {
+  display: grid;
   grid-template-columns: 1.05fr 1fr;
   gap: 0;
   padding: 0;
@@ -868,7 +869,10 @@ table input, table select { min-width: 84px; }
   box-shadow: var(--shadow-lg);
   text-align: center;
 }
-.login-split .login-card { border: 0; border-radius: 0; box-shadow: none; display: grid; align-content: center; }
+.login-split .login-card { border: 0; border-radius: 0; box-shadow: none; display: grid; align-content: center; justify-items: center; width: 100%; }
+.login-split .login-card .notice,
+.login-split .login-card .stack,
+.login-split .login-card .demo { width: min(440px, 100%); }
 .login-logo { width: min(160px, 60%); max-height: 130px; object-fit: contain; margin-bottom: 6px; }
 .login-card h1 { font-family: var(--font-display); font-size: 26px; margin: 4px 0 2px; }
 .login-card .eyebrow { margin-bottom: 4px; }
@@ -1640,4 +1644,104 @@ body.route-manager-pos .notice { flex: none; }
 @media (max-width: 768px) {
   .table-toolbar { grid-template-columns: 1fr; }
   .draft-dock { left: 14px; bottom: 14px; }
+}
+
+/* ---------- Returns page polish -------------------------------------------- */
+.returns-card { padding: 20px; }
+.returns-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--brand-50), #fff 52%, var(--gold-200));
+}
+.returns-summary h2 { margin-bottom: 4px; }
+.returns-table-wrap { border-radius: 20px; box-shadow: inset 0 1px 0 rgba(255,255,255,.75); }
+.returns-table { min-width: 880px; }
+.returns-table th { padding-block: 14px; background: #fff1eb; }
+.returns-table td { padding-block: 18px; }
+.returns-table tbody tr:nth-child(even) { background: rgba(253, 248, 244, .65); }
+.bill-chip {
+  display: inline-flex;
+  padding: 7px 10px;
+  border-radius: var(--pill);
+  background: var(--surface-sunken);
+  color: var(--ink-soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.return-item-name { display: block; color: var(--ink); font-weight: 800; }
+.return-item-code { display: block; color: var(--muted); margin-top: 2px; }
+.qty-pill {
+  display: inline-grid;
+  min-width: 34px;
+  place-items: center;
+  padding: 5px 10px;
+  border-radius: var(--pill);
+  background: var(--brand-50);
+  color: var(--brand-800);
+  font-weight: 800;
+}
+.muted-pill { background: var(--surface-sunken); color: var(--muted); }
+.ok-pill { background: var(--success-bg); color: var(--success); }
+.return-form {
+  display: grid;
+  grid-template-columns: minmax(84px, 120px) auto;
+  align-items: center;
+  gap: 10px;
+}
+.return-form input { min-width: 84px; text-align: center; font-weight: 800; }
+.return-form .btn { min-height: 40px; }
+
+/* ---------- Robust receipt printing ---------------------------------------- */
+@page { size: 80mm auto; margin: 0; }
+@media print {
+  body.route-manager-pos .app,
+  body.route-manager-pos .content,
+  body.route-manager-pos .zepto-pos {
+    display: block !important;
+    width: 80mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.route-manager-pos .zepto-pos > :not(.receipt-print) { display: none !important; }
+  body.route-manager-pos * { visibility: hidden !important; }
+  body.route-manager-pos .receipt-print,
+  body.route-manager-pos .receipt-print * { visibility: visible !important; }
+  body.route-manager-pos .receipt-print {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 5mm !important;
+    margin: 0 !important;
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+  body.route-manager-pos .receipt-header { margin-bottom: 8px !important; gap: 2px !important; font-size: 11px !important; }
+  body.route-manager-pos .receipt-table { min-width: 0 !important; margin-bottom: 6px !important; }
+  body.route-manager-pos .receipt-table th,
+  body.route-manager-pos .receipt-table td { padding: 3px 0 !important; font-size: 10.5px !important; }
+  body.route-manager-pos .receipt-total { font-size: 12px !important; padding-top: 5px !important; }
+  body.route-manager-pos .receipt-split,
+  body.route-manager-pos .receipt-thanks { font-size: 10.5px !important; margin-top: 5px !important; }
+}
+
+@media (max-width: 768px) {
+  .returns-summary { flex-direction: column; }
+  .return-form { grid-template-columns: 1fr; }
 }
