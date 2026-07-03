@@ -108,43 +108,75 @@ async function weeklyTrend(
 
 export async function managerToday(managerId: string | ObjectId): Promise<ManagerToday> {
   const { from, to } = todayBounds();
-  const { sales, saleItems, items } = await getCollections();
+  const { sales, saleItems } = await getCollections();
   const mId = objectId(managerId);
 
-  const salesRows = await sales.find({ managerId: mId, createdAt: { $gte: from, $lte: to } }).toArray();
-  const saleIds = salesRows.map((s) => s._id);
-  const itemRowsToday = saleIds.length ? await saleItems.find({ saleId: { $in: saleIds } }).toArray() : [];
+  const [salesSummary, topItems, trend] = await Promise.all([
+    sales
+      .aggregate<{
+        total: number;
+        cash: number;
+        online: number;
+        billCount: number;
+        saleIds: ObjectId[];
+      }>([
+        { $match: { managerId: mId, createdAt: { $gte: from, $lte: to } } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ['$totalAmount', 0] } },
+            cash: { $sum: { $ifNull: ['$cashAmount', 0] } },
+            online: { $sum: { $ifNull: ['$onlineAmount', 0] } },
+            billCount: { $sum: { $cond: [{ $eq: ['$type', 'sale'] }, 1, 0] } },
+            saleIds: { $push: '$_id' }
+          }
+        }
+      ])
+      .next(),
+    saleItems
+      .aggregate<DashboardTopItem & { pieces: number }>([
+        {
+          $lookup: {
+            from: 'sales',
+            localField: 'saleId',
+            foreignField: '_id',
+            pipeline: [{ $match: { managerId: mId, createdAt: { $gte: from, $lte: to } } }, { $project: { _id: 1 } }],
+            as: 'sale'
+          }
+        },
+        { $unwind: '$sale' },
+        { $group: { _id: '$itemId', qty: { $sum: '$quantity' }, amount: { $sum: '$lineTotal' }, pieces: { $sum: '$quantity' } } },
+        { $match: { qty: { $gt: 0 } } },
+        { $sort: { qty: -1 } },
+        { $limit: 5 },
+        { $lookup: { from: 'items', localField: '_id', foreignField: '_id', as: 'item' } },
+        { $unwind: { path: '$item', preserveNullAndEmptyArrays: true } },
+        { $project: { _id: 0, name: { $ifNull: ['$item.name', 'Item'] }, qty: 1, amount: 1, pieces: 1 } }
+      ])
+      .toArray(),
+    weeklyTrend((from, to) =>
+      sales.find({ managerId: mId, createdAt: { $gte: from, $lte: to } }, { projection: { createdAt: 1, totalAmount: 1 } }).toArray()
+    )
+  ]);
+
+  const saleIds = salesSummary?.saleIds || [];
+  const piecesResult = saleIds.length
+    ? await saleItems
+        .aggregate<{ pieces: number }>([
+          { $match: { saleId: { $in: saleIds } } },
+          { $group: { _id: null, pieces: { $sum: { $ifNull: ['$quantity', 0] } } } }
+        ])
+        .next()
+    : null;
 
   const summary: TodaySummary = {
-    total: salesRows.reduce((a, s) => a + Number(s.totalAmount || 0), 0),
-    cash: salesRows.reduce((a, s) => a + Number(s.cashAmount || 0), 0),
-    online: salesRows.reduce((a, s) => a + Number(s.onlineAmount || 0), 0),
-    pieces: itemRowsToday.reduce((a, i) => a + Number(i.quantity || 0), 0)
+    total: Number(salesSummary?.total || 0),
+    cash: Number(salesSummary?.cash || 0),
+    online: Number(salesSummary?.online || 0),
+    pieces: Number(piecesResult?.pieces || 0)
   };
-  const billCount = salesRows.filter((s) => s.type === 'sale').length;
 
-  // Top items by net pieces sold today (positive quantity = sale, negative = return).
-  const itemIds = [...new Set(itemRowsToday.map((i) => String(i.itemId)))];
-  const itemDocs = itemIds.length ? await items.find({ _id: { $in: itemIds.map((id) => objectId(id)) } }).toArray() : [];
-  const nameById = new Map(itemDocs.map((d) => [String(d._id), d.name]));
-  const topItems: DashboardTopItem[] = Object.values(
-    itemRowsToday.reduce<Record<string, DashboardTopItem>>((acc, si) => {
-      const key = String(si.itemId);
-      acc[key] ||= { name: nameById.get(key) || 'Item', qty: 0, amount: 0 };
-      acc[key].qty += Number(si.quantity || 0);
-      acc[key].amount += Number(si.lineTotal || 0);
-      return acc;
-    }, {})
-  )
-    .filter((i) => i.qty > 0)
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, 5);
-
-  // Seven-day personal revenue trend for the sparkline/chart. One query for the
-  // whole week (bucketed in JS) instead of 7 sequential round trips per day.
-  const trend = await weeklyTrend((from, to) => sales.find({ managerId: mId, createdAt: { $gte: from, $lte: to } }).toArray());
-
-  return { summary, billCount, topItems, trend };
+  return { summary, billCount: Number(salesSummary?.billCount || 0), topItems, trend };
 }
 
 export async function returnableLines(managerId: string | ObjectId): Promise<ReturnableLine[]> {
