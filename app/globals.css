@@ -819,6 +819,7 @@ table input, table select { min-width: 84px; }
 
 /* Split-screen login: brand showcase + sign-in card */
 .login-split {
+  display: grid;
   grid-template-columns: 1.05fr 1fr;
   gap: 0;
   padding: 0;
@@ -1641,25 +1642,6 @@ body.route-manager-pos .notice { flex: none; }
   .table-toolbar { grid-template-columns: 1fr; }
   .draft-dock { left: 14px; bottom: 14px; }
 }
-
-/* ---------- Manager dashboard refresh -------------------------------------- */
-.trend-chart-redesign {
-  margin-top: 10px;
-  padding: 10px 4px 0;
-  border-radius: var(--r-lg);
-  background: linear-gradient(180deg, rgba(255, 244, 241, .72), rgba(255, 255, 255, 0));
-}
-.trend-chart-redesign svg { min-height: 260px; }
-.trend-bar-stop-top { stop-color: var(--brand-300); stop-opacity: .88; }
-.trend-bar-stop-bottom { stop-color: var(--gold-300); stop-opacity: .28; }
-.trend-bar { opacity: .78; filter: drop-shadow(0 8px 14px rgba(232, 64, 47, .12)); }
-.trend-bar.peak { opacity: 1; }
-.trend-y { fill: #b99a8d; font-size: 10px; font-weight: 700; }
-.trend-day-amount { fill: var(--ink); font-size: 11px; font-weight: 800; }
-.trend-chart-redesign .trend-line { stroke-width: 3.4; }
-.trend-chart-redesign .trend-area { opacity: .55; animation: none; }
-.trend-chart-redesign .trend-dot,
-.trend-chart-redesign .trend-peak-label { opacity: 1; animation: none; }
 
 /* ---------- Returns page polish -------------------------------------------- */
 .returns-card { padding: 20px; }
